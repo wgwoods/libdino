@@ -8,7 +8,7 @@ all: $(BUILDDIR)
 config: $(BUILDDIR)
 
 $(BUILDDIR):
-	meson $@
+	meson $(BUILDDIR)
 
 check: $(BUILDDIR)
 	meson test -C $(BUILDDIR) --wrap=valgrind
@@ -20,6 +20,6 @@ install: $(BUILDDIR)
 	ninja -C $(BUILDDIR) install
 
 fake-install: $(BUILDDIR)
-	ninja -C $(BUILDDIR) -n install
+	meson -C $(BUILDDIR) -v -n install
 
 .PHONY: all config check clean install fake-install

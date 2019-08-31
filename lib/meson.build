@@ -12,5 +12,13 @@ lib_sources = [
     'sectab.c',
 ]
 
+lib_headers = [
+    'dino.h',
+    'libdino.h',
+]
+
 libdino = library('dino', lib_sources,
-                  dependencies: [compress_deps, crypto_deps])
+                  dependencies: [compress_deps, crypto_deps],
+                  install: true)
+
+install_headers(lib_headers)
