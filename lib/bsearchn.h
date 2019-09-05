@@ -44,15 +44,26 @@ ssize_t bsearchir_cmp(const void *key,
 /* bsearchi() is bsearchir() with baseidx=0 */
 #define bsearchi(k, a, n, s) bsearchir_cmp(k, a, 0, n, s, memcmp)
 
+/* bisect_cmp is like Python's bisect.bisect() - a sorted array bisection
+ * algorithm that returns an index where `key` could be inserted while keeping
+ * `array` sorted. */
 size_t bisect_cmp(const void *key,
                   const void *array, size_t lo, size_t hi, size_t size,
                   int (*cmp)(const void *, const void *, size_t));
+#define bisect(k, a, l, h, s) bisect_cmp(k, a, l, h, s, memcmp)
 
+/* A struct to return a range of indexes */
 typedef struct idx_range {
     size_t lo;
     size_t hi;
 } idx_range;
 
+/* bsearchpkr_cmp() ("binary search, partial key range") is a search algorithm
+ * for sorted arrays that returns a range of indexes that match the prefix
+ * given in `pkey`, with size `pkeysize`.
+ * If the returned range `r` has (r.lo == r.hi) then there was only one match;
+ * if (r.lo > r.hi) then there are no keys that match the prefix, but
+ * `r.hi` is the index where matching keys would go, as with bisect(). */
 idx_range bsearchpkr_cmp(const void *pkey, size_t pkeysize,
                          const void *array, size_t baseidx, size_t num, size_t size,
                          int (*cmp)(const void *, const void *, size_t));

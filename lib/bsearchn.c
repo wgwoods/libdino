@@ -1,4 +1,5 @@
 #include "bsearchn.h"
+#include <stdlib.h>
 
 /* Fucking C, man. The only binary search algorithm in the standard library
  * is bsearch(), which calls a comparison function:
@@ -91,6 +92,12 @@ ssize_t bsearchir_cmp(const void *key,
  */
 
 
+/*
+ * bisect_cmp() is an array bisection algorithm like Python's bisect.bisect():
+ * it returns an index where the given `key` could be inserted while keeping
+ * `array` sorted.
+ */
+
 size_t bisect_cmp(const void *key,
                   const void *array, size_t lo, size_t hi, size_t size,
                   int (*cmp)(const void *, const void *, size_t))
@@ -100,7 +107,7 @@ size_t bisect_cmp(const void *key,
     int res;
 
     while (lo<hi) {
-        mid = lo + ((hi-lo)>>1);          /* midpoint of [lo,hi] */
+        mid = lo + ((hi-lo)>>1);        /* midpoint of [lo,hi] */
         item = array + (mid*size);      /* get pointer to midpoint item */
         res = cmp(key, item, size);     /* compare with key */
         if (res > 0) {                  /* key > item? */
@@ -112,8 +119,8 @@ size_t bisect_cmp(const void *key,
     return lo;                          /* no match; return the final index */
 }
 
-#include <stdlib.h>
-
+/* bsearchpkr_cmp() ("binary search, partial key range") - find a range of
+ * indexes that match the prefix `pkey`, which is `pkeysize` bytes long. */
 idx_range bsearchpkr_cmp(const void *pkey, size_t pkeysize,
                          const void *array, size_t baseidx, size_t num, size_t size,
                          int (*cmp)(const void *, const void *, size_t))
@@ -127,7 +134,7 @@ idx_range bsearchpkr_cmp(const void *pkey, size_t pkeysize,
     memset(lokey, 0x00, size);
     memcpy(lokey, pkey, pkeysize);
 
-    char *hikey = malloc(pkeysize+1);
+    char *hikey = malloc(size);
     memset(hikey, 0xff, size);
     memcpy(hikey, pkey, pkeysize);
 
@@ -147,21 +154,29 @@ idx_range bsearchpkr_cmp(const void *pkey, size_t pkeysize,
     if (num == 0) {                     /* nothing matched */
         rv.lo = baseidx+1;
         rv.hi = baseidx;
-    /* We broke out of the loop because idx falls within the range of matching
-     * items! There's three possibilities:
-     * 1. We found the leftmost item:       ((lr == 0) && (hr == 1))
-     * 2. We found the rightmost item:      ((lr == -1) && (hr == 0))
-     * 3. We found something in the middle: ((lr == -1) && (hr == 1))
-     * We also know that the leftmost matching item is somewhere in the range
-     * [baseidx:idx], and the rightmost is in the range [baseidx:baseidx+num].
-     */
     } else {
-        /* TODO: it's probably quicker to just do a linear search for smaller
-         * values of num, and I think we'll typically get small values for num
-         * here, so...
-        rv.lo = lr ? bisect_cmp(lokey, array, baseidx, idx-1, size, cmp) : idx;
-        rv.hi = hr ? bisect_cmp(hikey, array, idx+1, idx+num, size, cmp)-1 : idx;
-        */
+        /* We broke out of the loop because idx falls within the range of
+         * matching items! There's three possibilities:
+         *
+         * 1. We found the leftmost item:  ((lr == 0) && (hr == 1))
+         * 2. We found the rightmost item: ((lr == -1) && (hr == 0))
+         * 3. We found a middle item:      ((lr == -1) && (hr == 1))
+         *
+         * So if (lr != 0), baseidx <= rv.lo <  idx, and similarly
+         *    if (hr != 0),     idx <  rv.hi <= idx+(num>>1)
+         *
+         * It's definitely simplest to just do a linear search up/down from
+         * `idx`, and probably just as fast for small values of `num` and/or
+         * small numbers of likely matches, so that's what we do here.
+         *
+         * TODO: for large `num` or many matches it might be faster to do a
+         * binary search of the remaining space, like:
+         * num >>= 1;
+         * rv.lo = bisect_cmp(lokey, array, baseidx, idx-1, size, cmp);
+         * rv.hi = bisect_cmp(hikey, array, idx+1, idx+num, size, cmp);
+         * Without some benchmarks it's hard to say what the right
+         * threshold for binary vs. linear search is, though.
+         */
         rv.lo = idx;
         rv.hi = idx;
         if (lr)
