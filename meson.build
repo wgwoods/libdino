@@ -3,4 +3,4 @@ project('libdino', 'c',
         license: 'LGPL-3.0')
 subdir('lib')
 subdir('src')
-#subdir('test')
+subdir('tests')

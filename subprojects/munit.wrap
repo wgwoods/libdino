@@ -1,0 +1,6 @@
+[wrap-git]
+directory=munit
+url=https://github.com/nemequ/munit/
+revision=head
+# for the record, it's Sep 2 2019, and the current HEAD commit id is:
+# 439de4a9b136bc3b5163e73d4caf37c590bef875

@@ -8,6 +8,8 @@ static char *get_str(Dino_Namtab namtab, Dino_NameOffset off) {
     }
 }
 
+/* TODO: inline, or macros? */
+
 inline char *get_name(Dino *dino, Dino_NameOffset off) {
     return get_str(dino->namtab, off);
 }

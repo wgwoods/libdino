@@ -31,6 +31,7 @@ typedef Dino_Offset Dino_Size;
  * follows the Shdr table. */
 #define DINO_SIZE_IS_64(x) (x & 0x80000000)
 #define DINO_SIZE64_IDX(x) (x & 0x7fffffff)
+#define DINO_SIZE64_INVALID (~0ULL)
 
 /* 64-bit offsets/sizes. Uncommon, but valid. */
 typedef uint64_t Dino_Off64;
@@ -58,6 +59,7 @@ typedef enum Dino_CompressID_e {
     DINO_COMPRESS_ZSTD = 6,
 } Dino_CompressID_e;
 typedef uint8_t Dino_CompressID;
+#define DINO_COMPRESSNUM 7
 
 /* Digest algorithm identifiers.
  * The values match OpenPGP/RPM PGPHASHALGO_* values (RFC4880, rpmpgp.h).
@@ -76,6 +78,7 @@ typedef enum Dino_DigestID_e {
     DINO_DIGEST_SHA224    = 11,
 } Dino_DigestID_e;
 typedef uint8_t Dino_DigestID;
+#define DINO_DIGESTNUM 12
 
 
 /* Architecture identifiers.
@@ -176,12 +179,15 @@ typedef uint32_t Dino_Secinfo;
 typedef enum Dino_Sectype_e {
     DINO_SEC_NULL     = 0x00, /* Invalid/empty section */
     DINO_SEC_BLOB     = 0x01, /* Opaque blob of binary data */
-    DINO_SEC_STRTAB   = 0x02, /* A table of strings prefixed with lengths */
-    DINO_SEC_CSTRTAB  = 0x03, /* Table of NUL-terminated UTF8 strings */
-    DINO_SEC_NOTE     = 0x04, /* ELF-style NOTE section */
-    DINO_SEC_PROVS    = 0x05, /* Symbols this object provides */
-    DINO_SEC_DEPS     = 0x06, /* Symbols this object requires */
-    DINO_SEC_FILESYS  = 0x07, /* A filesystem archive/image */
+    DINO_SEC_INDEX    = 0x02, /* A generic index over another section */
+    DINO_SEC_STRTAB   = 0x03, /* A table of strings prefixed with lengths */
+    DINO_SEC_CSTRTAB  = 0x04, /* Table of NUL-terminated UTF8 strings */
+    DINO_SEC_NOTE     = 0x05, /* ELF-style NOTE section */
+
+    DINO_SEC_PROVS    = 0x06, /* Symbols this object provides */
+    DINO_SEC_DEPS     = 0x07, /* Symbols this object requires */
+
+    DINO_SEC_FILESYS  = 0x08, /* A filesystem archive/image */
 
     /* TODO: DINO-specific filesystem/archive/packfile format.
      * Use separate sections for:

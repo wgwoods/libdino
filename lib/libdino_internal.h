@@ -12,6 +12,8 @@ typedef struct Dino_Data_List {
     struct Dino_Data_List *next;
 } Dino_Data_List;
 
+#define EMPTY_DATA_LIST ((Dino_Data_List) { EMPTY_DINO_DATA , NULL })
+
 /* DINO nametable structure */
 struct Dino_Namtab {
     Dino_NameOffset size;   /* size of nametable */
@@ -23,17 +25,23 @@ struct Dino_Sec {
     Dino_Data_List data;
     Dino_Secidx index;
     struct Dino *dino;
-    union {
-        Dino_Shdr   *s32;
-        Dino_Shdr64 *s64;
-    } shdr;
+    Dino_Shdr *shdr;
+    Dino_Size64 size;
+    Dino_Size64 count;
+    Dino_Size64 offset;
 };
 
 /* DINO section table structure */
 struct Dino_Sectab {
-    Dino_Secidx cnt;                        /* count of sections in this table */
-    struct Dino_Sec sec[DINO_SEC_MAXCNT];   /* section descriptors */
+    Dino_Secidx count;      /* count of sections in this table */
+    Dino_Secidx allocated;  /* how many sections we've allocated memory for */
+    Dino_Shdr *shdr;        /* buffer for raw shdr entries */
+    struct Dino_Sec *sec;   /* section descriptors */
 };
+
+/* Internal sectab functions */
+void clear_sectab(Dino_Sectab *sectab);
+Dino_Secidx realloc_sectab(Dino_Sectab *sectab, Dino_Secidx alloc_count);
 
 /* DINO descriptor. */
 struct Dino {
