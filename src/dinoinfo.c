@@ -118,14 +118,14 @@ int main(int argc, char *argv[]) {
     Dino_Index *rpmidx = get_index(dino, rpmidxsec);
     Dino_Idx_Cnt keycount = index_get_cnt(rpmidx);
     Dino_Idx_Key *k;
-    Dino_Idx_Val v;
+    Dino_Idx_Val *v;
     char *hexkey = malloc(keysize+1); /* FIXME: keysize... */
     for (int i=0; i<keycount; i++) {
         k = index_get_key(rpmidx, i);
         v = index_get_val(rpmidx, i);
         key2hex(k, 4, hexkey);
         printf(" rpm %s size %08x offset %08x\n",
-                hexkey, v.size, v.offset);
+                hexkey, v->size, v->offset);
     }
     const uint8_t partkey[] = { 0xcc, 0xa3, 0x91, 0x80 };
     key2hex(partkey, 4, hexkey);

@@ -68,7 +68,7 @@ typedef struct Dino_Idx_Val {
 
 Dino_Idx_Cnt index_get_cnt(Dino_Index *idx);
 Dino_Idx_Key *index_get_key(Dino_Index *idx, Dino_Idx_Cnt);
-Dino_Idx_Val index_get_val(Dino_Index *idx, Dino_Idx_Cnt);
+Dino_Idx_Val *index_get_val(Dino_Index *idx, Dino_Idx_Cnt);
 Dino_Idx_Key *index_key_match(Dino_Index *idx, const Dino_Idx_Key *key, size_t matchlen);
 
 #endif /* _LIBDINO_H */

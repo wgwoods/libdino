@@ -7,6 +7,7 @@ crypto_deps = [
 ]
 
 lib_sources = [
+    'array.c',
     'bsearchn.c',
     'dino_begin.c',
     'index.c',
