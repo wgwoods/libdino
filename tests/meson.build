@@ -8,4 +8,8 @@ munit_src = [
 munit_exe = executable('test_munit', munit_src,
                        dependencies: munit_dep,
                        link_with: libdino)
+array_exe = executable('test_array', 'test_array.c',
+                       dependencies: munit_dep,
+                       link_with: libdino)
+test('array', array_exe)
 test('munit', munit_exe)

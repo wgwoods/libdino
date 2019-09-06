@@ -15,6 +15,8 @@ void __attribute__ ((constructor)) _array_init_static_vars(void) {
 }
 
 ssize_t array_realloc(Array *a, size_t alloc_count) {
+    if (!a)
+        return -1;
     void *data;
     if (alloc_count == 0)
         return 0;
@@ -28,6 +30,8 @@ ssize_t array_realloc(Array *a, size_t alloc_count) {
 }
 
 ssize_t array_grow(Array *a) {
+    if (!a)
+        return -1;
     size_t size = a->allocated * a->isize;
     /* Small/empty array: allocate enough space to fill a page */
     if (size < PAGESIZE)
@@ -41,6 +45,8 @@ ssize_t array_grow(Array *a) {
 }
 
 Array *array_new(size_t isize) {
+    if (!isize)
+        return NULL;
     Array *a = calloc(1, sizeof(Array));
     if (a)
         a->isize = isize;
@@ -99,14 +105,14 @@ void array_free(Array *a) {
     free(a);
 }
 
-#define ARRAY_IDX_PTR(a, i) (a->data + (a->isize*i))
+#define ARRAY_IDX_PTR(a, i) (a->data + (a->isize*(i)))
 #define ARRAY_ENSURE_SPACE(a) ((a->allocated < a->count) || (array_grow(a) > 0))
 
 ssize_t array_append(Array *a, const void *item) {
     if (!ARRAY_ENSURE_SPACE(a)) return -1;
     memcpy(ARRAY_IDX_PTR(a, a->count), item, a->isize);
     a->count++;
-    return a->count;
+    return a->count-1; /* TODO is this really useful? */
 }
 
 ssize_t array_insert(Array *a, const void *item, size_t idx) {
@@ -116,8 +122,8 @@ ssize_t array_insert(Array *a, const void *item, size_t idx) {
         return -1;
     if (!ARRAY_ENSURE_SPACE(a)) return -1;
     void *iptr = ARRAY_IDX_PTR(a, idx);
-    /* FIXME error checking here? */
-    memmove(iptr, iptr+a->isize, a->isize*(a->count-idx));
+    void *dest = iptr + a->isize;
+    memmove(dest, iptr, a->isize*(a->count-idx));
     memcpy(iptr, item, a->isize);
     a->count++;
     return a->count;
@@ -130,6 +136,7 @@ void *array_set(Array *a, const void *item, size_t idx) {
 }
 
 /* TODO: array_insort_range_nr (no-replace) */
+/* TODO: versions of these that take a compare func int (*cmp)(...) */
 
 ssize_t array_insort_range(SortArray *a, const void *item, size_t baseidx, size_t num) {
     if (!ARRAY_ENSURE_SPACE(a))
@@ -149,7 +156,25 @@ int memcmp_p(const void *a, const void *b, void *sizep) {
     return memcmp(a, b, *(size_t *)sizep);
 }
 
+ /* TODO: baseidx/num? (we might want proper array slicing tho..) */
 SortArray *array_sort(Array *a) {
     qsort_r(a->data, a->count, a->isize, memcmp_p, &a->isize);
     return (SortArray *)a;
+}
+
+int array_cmp(const Array *a, const Array *b) {
+    if (!a)
+        return (b ? -1 : 0);
+    if (!b)
+        return (a ? 1 : 0);
+    if (a->count < b->count)
+        return -1;
+    if (a->count > b->count)
+        return 1;
+    int r = 0;
+    off_t max_o = array_size(a);
+    for (off_t o=0; (r==0) && (o < max_o); o+=a->isize) {
+        r = memcmp(a->data+o, b->data+o, a->isize);
+    }
+    return r;
 }
