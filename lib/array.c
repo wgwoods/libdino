@@ -4,24 +4,23 @@
 #include "system.h"
 #include "array.h"
 
-static long PAGESIZE = 4096;
-static long CACHELINE = 64;
+static size_t PAGESIZE = 4096;
+static size_t CHONKSIZE = 4096<<10;
 
 void __attribute__ ((constructor)) _array_init_static_vars(void) {
     long sys_pagesize = sysconf(_SC_PAGESIZE);
-    long sys_cacheline = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
     if (sys_pagesize > 0) PAGESIZE = sys_pagesize;
-    if (sys_cacheline > 0) CACHELINE = sys_cacheline;
+    long sys_chonksize = sysconf(_SC_LEVEL3_CACHE_SIZE);
+    if (sys_chonksize > 0) CHONKSIZE = sys_chonksize;
 }
 
 ssize_t array_realloc(Array *a, size_t alloc_count) {
     if (!a)
         return -1;
-    void *data;
     if (alloc_count == 0)
         return 0;
     alloc_count = MAX(alloc_count, a->count);
-    data = reallocarray(a->data, alloc_count, a->isize);
+    void *data = reallocarray(a->data, alloc_count, a->isize);
     if (data == NULL)
         return -1;
     a->allocated = alloc_count;
@@ -32,16 +31,14 @@ ssize_t array_realloc(Array *a, size_t alloc_count) {
 ssize_t array_grow(Array *a) {
     if (!a)
         return -1;
-    size_t size = a->allocated * a->isize;
-    /* Small/empty array: allocate enough space to fill a page */
-    if (size < PAGESIZE)
-        return array_realloc(a, MAX(PAGESIZE/a->isize,1));
-    /* Medium-sized array: just double it */
-    size_t chonk = PAGESIZE<<10;
-    if (size < chonk)
+    /* Empty array: allocate space for one page's worth of items (minimum 4) */
+    if (a->allocated == 0)
+        return array_realloc(a, MAX(4, PAGESIZE/a->isize));
+    /* Medium-sized array (under 1024 pages): enh just double it */
+    if ((a->allocated * a->isize) < CHONKSIZE)
         return array_realloc(a, a->allocated << 1);
     /* Large(ish) array: allocate another chonk's worth */
-    return array_realloc(a, a->allocated + (chonk / a->isize));
+    return array_realloc(a, a->allocated + (CHONKSIZE/a->isize));
 }
 
 Array *array_new(size_t isize) {
@@ -106,7 +103,7 @@ void array_free(Array *a) {
 }
 
 #define ARRAY_IDX_PTR(a, i) (a->data + (a->isize*(i)))
-#define ARRAY_ENSURE_SPACE(a) ((a->allocated < a->count) || (array_grow(a) > 0))
+#define ARRAY_ENSURE_SPACE(a) ((a->allocated > a->count) || (array_grow(a) > 0))
 
 ssize_t array_append(Array *a, const void *item) {
     if (!ARRAY_ENSURE_SPACE(a)) return -1;
@@ -152,29 +149,11 @@ ssize_t array_insort_range(SortArray *a, const void *item, size_t baseidx, size_
     return idx;
 }
 
-int memcmp_p(const void *a, const void *b, void *sizep) {
-    return memcmp(a, b, *(size_t *)sizep);
-}
-
- /* TODO: baseidx/num? (we might want proper array slicing tho..) */
-SortArray *array_sort(Array *a) {
-    qsort_r(a->data, a->count, a->isize, memcmp_p, &a->isize);
+#if (UINTPTR_MAX < SIZE_MAX)
+#error "sizeof(void *) < sizeof(size_t)?? array_sort_cmp() is probably busted"
+#endif
+SortArray *array_sort_cmp(Array *a,
+                          int (*cmp)(const void *, const void *, const size_t)) {
+    qsort_r(a->data, a->count, a->isize, (int (*)(const void *, const void *, void *))cmp, (void *)a->isize);
     return (SortArray *)a;
-}
-
-int array_cmp(const Array *a, const Array *b) {
-    if (!a)
-        return (b ? -1 : 0);
-    if (!b)
-        return (a ? 1 : 0);
-    if (a->count < b->count)
-        return -1;
-    if (a->count > b->count)
-        return 1;
-    int r = 0;
-    off_t max_o = array_size(a);
-    for (off_t o=0; (r==0) && (o < max_o); o+=a->isize) {
-        r = memcmp(a->data+o, b->data+o, a->isize);
-    }
-    return r;
 }

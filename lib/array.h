@@ -18,7 +18,7 @@ typedef struct Array {
 
 #define array_len(a) (a->count)
 #define array_size(a) (a->isize*a->count)
-#define array_get(a, i) (a->data + ((i)*a->isize))
+#define array_get(a, i) (a->data + (a->isize*(i)))
 #define array_icpy(dest, a, i) memcpy(dest, array_get(a,i), a->isize)
 
 Array *array_new(size_t isize);
@@ -39,7 +39,8 @@ int array_cmp(const Array *a, const Array *b);
 
 /* Sorted array functions / macros */
 typedef struct Array SortArray;
-SortArray *array_sort(Array *a);
+SortArray *array_sort_cmp(Array *a, int (*cmp)(const void *, const void *, const size_t));
+#define array_sort(a) array_sort_cmp(a, memcmp)
 ssize_t array_insort_range(SortArray *a, const void *item, size_t baseidx, size_t num);
 #define array_bisect_range(a, i, b, n) bisect(i, a->data, b, (b)+(n), a->isize)
 #define array_insort(a, item) array_insort_range(a, item, 0, a->count)

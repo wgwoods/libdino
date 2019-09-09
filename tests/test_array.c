@@ -127,7 +127,7 @@ static Array *make_random_array(size_t isize, size_t num) {
 
 static Array *make_unsorted_array(size_t isize, size_t num) {
     Array *a = make_random_array(isize, num);
-    if (a->count > 1) /* Consider empty/1-element arrays "unsorted" */
+    if (a->count <= 1) /* Consider empty/1-element arrays "unsorted" */
         return a;
     size_t size = isize * num;
     while (array_is_sorted(a))
@@ -160,26 +160,8 @@ static void *sortarray_setup(const MunitParameter params[], void* user_data) {
     return make_sorted_array(INTPARAM("isize"), INTPARAM("count"));
 }
 
-static void randarray_teardown(void *a) {
+static void array_teardown(void *a) {
     array_free(a);
-}
-
-MunitResult test_rand_insort(const MunitParameter params[], void* fixture) {
-    Array *a = array_init(INTPARAM("isize"));
-    int count = INTPARAM("count");
-    void *item = munit_malloc(a->isize);
-    ssize_t idx;
-    for (int i=0; i<count; i++) {
-        munit_rand_memory(a->isize, item);
-        idx = array_insort(a, item);
-        munit_assert_size(idx, >=, 0);
-        munit_assert_array_item_equal(a, idx, item);
-        munit_assert(array_is_sorted(a));
-        munit_assert_size(a->count, ==, i+1);
-    }
-    free(item);
-    array_free(a);
-    return MUNIT_OK;
 }
 
 MunitResult test_randarray_sort(const MunitParameter params[], void* fixture) {
@@ -195,24 +177,25 @@ MunitResult test_randarray_sort(const MunitParameter params[], void* fixture) {
 
 MunitResult test_randidx_insert(const MunitParameter params[], void* fixture) {
     Array *a = fixture;
-    void *item = make_random_item(a->isize);
+    int inserts = INTPARAM("inserts");
     void *olditem, *lastitem;
-    uint32_t idx;
     size_t oldcount;
-    do {
-        idx = munit_rand_int_range(0, a->count-1);
-    } while (0 == memcmp(item, array_get(a, idx), a->isize));
-    oldcount = a->count;
-    olditem = array_item_acopy(a, idx);
-    lastitem = array_item_acopy(a, a->count-1);
+    void *item = munit_malloc(a->isize);
+    for (int i=0; i<inserts; i++) {
+        munit_rand_memory(a->isize, item);
+        uint32_t idx = (a->count > 1) ? munit_rand_int_range(0, a->count-1) : 0;
 
-    array_insert(a, item, idx);
+        oldcount = a->count;
+        olditem = array_item_acopy(a, idx);
+        lastitem = array_item_acopy(a, a->count-1);
 
-    munit_assert_size(a->count, ==, oldcount+1);
-    munit_assert_array_item_equal(a, idx, item);
-    munit_assert_array_item_equal(a, idx+1, olditem);
-    munit_assert_array_item_equal(a, oldcount, lastitem);
+        array_insert(a, item, idx);
 
+        munit_assert_size(a->count, ==, oldcount+1);
+        munit_assert_array_item_equal(a, idx, item);
+        munit_assert_array_item_equal(a, idx+1, olditem);
+        munit_assert_array_item_equal(a, oldcount, lastitem);
+    }
     free(item);
     free(olditem);
     free(lastitem);
@@ -220,33 +203,64 @@ MunitResult test_randidx_insert(const MunitParameter params[], void* fixture) {
 }
 
 MunitResult test_append_and_sort(const MunitParameter params[], void* fixture) {
-    Array *a = array_init(INTPARAM("isize"));
-    int count = INTPARAM("count");
+    Array *a = fixture;
+    int inserts = INTPARAM("inserts");
     void *item = munit_malloc(a->isize);
-    for (int i=0; i<count; i++) {
+    size_t idx;
+    for (int i=0; i<inserts; i++) {
         munit_rand_memory(a->isize, item);
-        array_append(a, item);
-        munit_assert_array_item_equal(a, i, item);
+        idx = array_append(a, item);
+        munit_assert_array_item_equal(a, idx, item);
     }
-    munit_assert_size(a->count, ==, count);
     array_sort(a);
     munit_assert(array_is_sorted(a));
     free(item);
-    array_free(a);
+    return MUNIT_OK;
+}
+
+MunitResult test_insort(const MunitParameter params[], void* fixture) {
+    Array *a = fixture;
+    int inserts = INTPARAM("inserts");
+    void *item = munit_malloc(a->isize);
+    size_t idx;
+    for (int i=0; i<inserts; i++) {
+        munit_rand_memory(a->isize, item);
+        idx = array_insort(a, item);
+        munit_assert_array_item_equal(a, idx, item);
+    }
+    array_sort(a);
+    munit_assert(array_is_sorted(a));
+    free(item);
     return MUNIT_OK;
 }
 
 static MunitParameterEnum randarray_params[] = {
+    { (char*) "inserts", (char*[]) { "1", NULL } } ,
+    { (char*) "count", (char*[]) { "1", "10", "100", "1000", "10000", NULL } },
     { (char*) "isize", (char*[]) { "1", "2", "4", "8", "20", "32", NULL } },
-    { (char*) "count", (char*[]) { "10", "100", "1000", "10000", "100000", NULL } },
+    { NULL, NULL },
+};
+
+static MunitParameterEnum bench_params[] = {
+    { (char*) "inserts", (char*[]) { "100", NULL } } ,
+    { (char*) "count", (char*[]) { "100", "10000", "100000", NULL } },
+    { (char*) "isize", (char*[]) { "20", "32", NULL } },
     { NULL, NULL },
 };
 
 MunitTest arrayrandtests[] = {
-    { "/insert", test_randidx_insert, randarray_setup, randarray_teardown, MUNIT_TEST_OPTION_NONE, randarray_params },
-    { "/sort", test_randarray_sort, randarray_setup, randarray_teardown, MUNIT_TEST_OPTION_NONE, randarray_params },
-    //{ "/insort", test_rand_insort, NULL, NULL, MUNIT_TEST_OPTION_NONE, randarray_params },
-    { "/append-and-sort", test_append_and_sort, NULL, NULL, MUNIT_TEST_OPTION_NONE, randarray_params },
+    { "/insert", test_randidx_insert, randarray_setup, array_teardown, MUNIT_TEST_OPTION_NONE, randarray_params },
+    { "/sort", test_randarray_sort, randarray_setup, array_teardown, MUNIT_TEST_OPTION_NONE, randarray_params },
+    { "/insort", test_insort, sortarray_setup, array_teardown, MUNIT_TEST_OPTION_NONE, randarray_params },
+    { "/append-and-sort", test_append_and_sort, sortarray_setup, array_teardown, MUNIT_TEST_OPTION_NONE, randarray_params },
+    /* End-of-array marker */
+    { NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+};
+
+MunitTest arraybenchtests[] = {
+    { "/insert", test_randidx_insert, randarray_setup, array_teardown, MUNIT_TEST_OPTION_NONE, bench_params },
+    { "/insort", test_insort, sortarray_setup, array_teardown, MUNIT_TEST_OPTION_NONE, bench_params },
+    { "/append-and-sort", test_append_and_sort, sortarray_setup, array_teardown, MUNIT_TEST_OPTION_NONE, bench_params },
     /* End-of-array marker */
     { NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
 };
@@ -255,7 +269,8 @@ static const MunitSuite arraysuite = {
     "/libdino/array",
     arraytests,
     (MunitSuite[]) {
-        { "/rand", arrayrandtests, NULL, 3, MUNIT_SUITE_OPTION_NONE },
+        { "/rand", arrayrandtests, NULL, 1, MUNIT_SUITE_OPTION_NONE },
+        { "/bench", arraybenchtests, NULL, 3, MUNIT_SUITE_OPTION_NONE },
         { NULL, NULL, NULL, 0, MUNIT_SUITE_OPTION_NONE },
     },
     1,
@@ -265,5 +280,3 @@ static const MunitSuite arraysuite = {
 int main(int argc, char* argv[MUNIT_ARRAY_PARAM(argc + 1)]) {
     return munit_suite_main(&arraysuite, (void*) "libdino", argc, argv);
 };
-
-
