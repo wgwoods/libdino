@@ -1,19 +1,35 @@
-compress_deps = [
-#    dependency('libzstd',   version: '>= 1.4.0'),
-#    dependency('zlib',      version: '>= 1.2.7', required: false),
-]
-crypto_deps = [
-#    dependency('libcrypto', version: '>= 1.1.0'),
-]
+zstd = dependency('libzstd',   version: '>= 1.4.0', required: get_option('zstd'))
+lzma = dependency('liblzma',   version: '>= 5.2.4', required: get_option('xz'))
+zlib = dependency('zlib',      version: '>= 1.2.7', required: get_option('gzip'))
+
+compress_deps = [zstd, lzma, zlib]
+
+libcrypto = dependency('libcrypto', version: '>= 1.1.0')
+crypto_deps = [libcrypto]
+
+config = configuration_data()
+config.set_quoted('LIBDINO_VERSION_STRING', meson.project_version())
+config.set10('LIBDINO_ZSTD', zstd.found())
+config.set10('LIBDINO_LZMA', lzma.found())
+config.set10('LIBDINO_ZLIB', zlib.found())
+config_h = configure_file(input: 'config.h.in',
+                          output: 'config.h',
+                          configuration: config)
 
 lib_sources = [
     'array.c',
     'bsearchn.c',
+    'compressfuncs.c',
+    'compression.c',
     'dino_begin.c',
     'index.c',
     'namtab.c',
     'sectab.c',
 ]
+
+if zstd.found()
+  lib_sources += 'zstd.c'
+endif
 
 lib_headers = [
     'dino.h',

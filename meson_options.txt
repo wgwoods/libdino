@@ -1,0 +1,4 @@
+# compression options
+option('zstd', type:'feature', value:'enabled')
+option('xz',   type:'feature', value:'enabled')
+option('gzip', type:'feature', value:'disabled')

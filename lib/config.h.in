@@ -1,0 +1,14 @@
+#pragma once
+
+/* version string */
+#mesondefine LIBDINO_VERSION_STRING
+
+/* support zstd compression */
+#mesondefine LIBDINO_ZSTD
+
+/* support xz/lzma compression */
+#mesondefine LIBDINO_LZMA
+
+/* support zlib/gzip compression */
+#mesondefine LIBDINO_ZLIB
+

@@ -57,6 +57,8 @@ typedef enum Dino_CompressID_e {
     DINO_COMPRESS_XZ   = 4,
     DINO_COMPRESS_LZ4  = 5,
     DINO_COMPRESS_ZSTD = 6,
+    /* ... */
+    DINO_COMPRESS_INVALID = 255,
 } Dino_CompressID_e;
 typedef uint8_t Dino_CompressID;
 #define DINO_COMPRESSNUM 7
