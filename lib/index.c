@@ -71,6 +71,18 @@ ssize_t index_realloc(Dino_Index *idx, size_t alloc_count) {
     return alloc_count;
 }
 
+Dino_Index *index_with_capacity(uint8_t keysize, size_t alloc_count) {
+    Dino_Index *idx = index_new(keysize);
+    if (idx == NULL)
+        return NULL;
+    if (alloc_count == 0)
+        return idx;
+    if (index_realloc(idx, alloc_count) > 0)
+        return idx;
+    index_free(idx);
+    return NULL;
+}
+
 void index_clear(Dino_Index *idx) {
     free(idx->fanout);
     idx->fanout = NULL;
@@ -81,6 +93,8 @@ void index_clear(Dino_Index *idx) {
 
 void index_free(Dino_Index *idx) {
     index_clear(idx);
+    array_free(idx->keys);
+    array_free(idx->vals);
     free(idx);
 }
 
@@ -141,7 +155,6 @@ int load_indexes(Dino *dino) {
 
 ssize_t index_find(Dino_Index *idx, const Dino_Idx_Key *key) {
     size_t baseidx, num;
-    /* TODO: if fanout == NULL: baseidx=0, num=idx->count */
     uint8_t b = key[0];
     baseidx = (b==0) ? 0 : idx->fanout[b-1];
     num = idx->fanout[b] - baseidx;

@@ -49,7 +49,6 @@ ssize_t read_sectab(int fd, Dino *dino) {
             return -EIO;
         }
         nread += tread;
-        /* assert(nread == dino->dhdr.sectab_size); */
     }
 
     /* FIXME: byteswap if needed! */
@@ -116,7 +115,7 @@ Dino *read_dino(int fd) {
         return NULL;
     }
     t += nr;
-    /* TODO: instantiate Dino_Data */
+    /* TODO: instantiate Dino_Data? */
     return dino;
 }
 

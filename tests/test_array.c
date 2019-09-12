@@ -141,12 +141,6 @@ static Array *make_sorted_array(size_t isize, size_t num) {
     return a;
 }
 
-static void *make_random_item(size_t size) {
-    void *item = munit_malloc(size);
-    munit_rand_memory(size, item);
-    return item;
-}
-
 #define INTPARAM(name) atoi(munit_parameters_get(params, name))
 #define munit_assert_array_item_equal(a, idx, item) \
     munit_assert_memory_equal(a->isize, array_get(a, idx), item)
