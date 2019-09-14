@@ -1,10 +1,10 @@
 #include <string.h>
 #include "compression.h"
-#include "common.h"
-#include "config.h"
+#include "../common.h"
+#include "../config.h"
 
 #if LIBDINO_ZSTD
-#include "d_zstd.h"
+#include "compression/zstd.h"
 #endif
 
 int compress_avail(Dino_CompressID id) {

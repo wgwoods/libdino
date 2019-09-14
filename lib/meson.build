@@ -19,8 +19,8 @@ config_h = configure_file(input: 'config.h.in',
 lib_sources = [
     'array.c',
     'bsearchn.c',
-    'compressfuncs.c',
-    'compression.c',
+    'compression/compression.c',
+    'compression/funcs.c',
     'dino_begin.c',
     'index.c',
     'namtab.c',
@@ -28,7 +28,7 @@ lib_sources = [
 ]
 
 if zstd.found()
-  lib_sources += 'zstd.c'
+  lib_sources += 'compression/zstd.c'
 endif
 
 lib_headers = [

@@ -99,7 +99,7 @@ size_t cstream_compress1(Dino_CStream *cstream, inBuf *in, outBuf *out) {
     return out->pos;
 }
 
-size_t dstream_uncompress(Dino_DStream *dstream, inBuf *in, outBuf *out) {
+size_t dstream_decompress(Dino_DStream *dstream, inBuf *in, outBuf *out) {
     return dstream->funcs->decompress(dstream, in, out);
 }
 

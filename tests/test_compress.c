@@ -1,5 +1,5 @@
 #include "munit.h"
-#include "../lib/compression.h"
+#include "../lib/compression/compression.h"
 #include "../lib/config.h"
 
 #define INTPARAM(name) atoi(munit_parameters_get(params, name))
@@ -86,7 +86,7 @@ MunitResult test_compress1(const MunitParameter params[], void* user_data) {
     outbuf->size = outbuf->pos;
     outbuf->pos = 0;
     /* decompress output back to inbuf */
-    dstream_uncompress(ds, (inBuf *)outbuf, (outBuf *)inbuf);
+    dstream_decompress(ds, (inBuf *)outbuf, (outBuf *)inbuf);
     /* NOTE inbuf/outbuf are still switched here */
     munit_assert_size(outbuf->pos, ==, outbuf->size); /* we read everything? */
     munit_assert_size(inbuf->pos, ==, TESTBLOCK);     /* got expected size? */

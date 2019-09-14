@@ -3,7 +3,7 @@
 #define _COMPRESSION_H 1
 
 #include <stddef.h>
-#include "dino.h"
+#include "../dino.h"
 
 #define COMPRESSNAME_LEN 5
 const char *CompressName[DINO_COMPRESSNUM+1];
