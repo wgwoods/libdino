@@ -147,17 +147,16 @@ MunitResult test_compress_buf_pos(const MunitParameter params[], void* user_data
     return MUNIT_OK;
 }
 
-/* TODO: this is kind of dumb */
+/* list of compression algorithms we've built with */
+#define DECLARE_ALGONAME(id, name) name,
 static char *avail_algos[] = {
     "none",
-#if LIBDINO_ZSTD
-    "zstd",
-#endif
+    #include "../lib/compression/algo.inc"
     NULL,
 };
 
 static MunitParameterEnum compr_params[] = {
-    { (char*) "algo", avail_algos }, /* to be filled in at startup */
+    { (char*) "algo", avail_algos },
     { NULL, NULL },
 };
 

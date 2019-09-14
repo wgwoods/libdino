@@ -3,10 +3,6 @@
 #include "../memory.h"
 #include "../config.h"
 
-#if LIBDINO_ZSTD
-#include "zstd.h"
-#endif
-
 int compress_avail(Dino_CompressID id) {
     return (_get_ccfuncs(id) != NULL);
 }
@@ -36,6 +32,9 @@ size_t memcpy_compress(Dino_CStream *ds, inBuf *in, outBuf *out) {
 #define memcpy_decompress ((size_t (*)(Dino_DStream*, inBuf *, outBuf *))memcpy_compress)
 size_t memcpy_flush(Dino_CStream *cs, outBuf *outbuf) { return 0; }
 
+/* Do the #includes for all the algorithms we're including */
+#define ALGO_DOINCLUDES 1
+#include "algo.inc"
 
 /* Here's our struct that holds decompression interfaces... */
 const Dino_DCFuncs dcfuncs[] = {
@@ -63,7 +62,7 @@ const Dino_DCFuncs dcfuncs[] = {
 
 /* And here's the compression interfaces */
 const Dino_CCFuncs ccfuncs[] = {
-#ifdef LIBDINO_ZSTD
+#if LIBDINO_ZSTD
     {
         DINO_COMPRESS_ZSTD,
         zstd_create_cctx, zstd_free_cctx,
