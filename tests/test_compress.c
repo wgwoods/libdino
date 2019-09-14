@@ -1,15 +1,16 @@
 #include "munit.h"
 #include "../lib/compression/compression.h"
 #include "../lib/common.h"
-#include "../lib/config.h"
 
 #define INTPARAM(name) atoi(munit_parameters_get(params, name))
 
 MunitResult test_stream_new(const MunitParameter params[], void* user_data) {
+    /* Make sure unknown compression names give us DINO_COMPRESS_INVALID */
+    munit_assert_uint(compress_id("FUNK"), ==, DINO_COMPRESS_INVALID);
+
     /* Make sure we get NULL on invalid id */
     munit_assert_null(cstream_create(DINO_COMPRESS_INVALID));
     munit_assert_null(dstream_create(DINO_COMPRESS_INVALID));
-    munit_assert_uint(compress_id("FUNK"), ==, DINO_COMPRESS_INVALID);
 
     Dino_CompressID id = compress_id(munit_parameters_get(params, "algo"));
     Dino_CStream *cs = cstream_create(id);
@@ -30,17 +31,15 @@ MunitResult test_stream_new(const MunitParameter params[], void* user_data) {
     munit_assert_uint8(ds->funcs->id, ==, id);
     munit_assert_size(ds->rec_inbuf_size, >, 0);
     munit_assert_size(ds->rec_outbuf_size, >, 0);
+
     /* cleanup! */
     cstream_free(cs);
     dstream_free(ds);
-    /* also this shouldn't crash */
+    /* also make sure this doesn't crash */
     cstream_free(NULL);
     dstream_free(NULL);
     return MUNIT_OK;
 }
-
-#define CHUNKSIZE 64
-#define TESTBLOCK (CHUNKSIZE*16)
 
 size_t memcpy_repeat(void *dest, const void *src, size_t size, size_t count) {
     size_t totalsize = size*count;
@@ -48,6 +47,9 @@ size_t memcpy_repeat(void *dest, const void *src, size_t size, size_t count) {
         memcpy(dest+off, src, size);
     return totalsize;
 }
+
+#define CHUNKSIZE 64
+#define TESTBLOCK (CHUNKSIZE*16)
 
 MunitResult test_compress1(const MunitParameter params[], void* user_data) {
     Dino_CompressID id = compress_id(munit_parameters_get(params, "algo"));
@@ -147,16 +149,8 @@ MunitResult test_compress_buf_pos(const MunitParameter params[], void* user_data
     return MUNIT_OK;
 }
 
-/* list of compression algorithms we've built with */
-#define DECLARE_ALGONAME(id, name) name,
-static char *avail_algos[] = {
-    "none",
-    #include "../lib/compression/algo.inc"
-    NULL,
-};
-
 static MunitParameterEnum compr_params[] = {
-    { (char*) "algo", avail_algos },
+    { (char*) "algo", (char **)libdino_compression_available },
     { NULL, NULL },
 };
 

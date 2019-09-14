@@ -1,7 +1,6 @@
 #include "compression.h"
 #include "../common.h"
 #include "../memory.h"
-#include "../config.h"
 
 int compress_avail(Dino_CompressID id) {
     return (_get_ccfuncs(id) != NULL);

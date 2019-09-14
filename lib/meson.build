@@ -12,8 +12,8 @@ config.set_quoted('LIBDINO_VERSION_STRING', meson.project_version())
 config.set10('LIBDINO_ZSTD', zstd.found())
 config.set10('LIBDINO_LZMA', lzma.found())
 config.set10('LIBDINO_ZLIB', zlib.found())
-config_h = configure_file(input: 'config.h.in',
-                          output: 'config.h',
+config_h = configure_file(input: 'libdino-config.h.in',
+                          output: 'libdino-config.h',
                           configuration: config)
 
 lib_sources = [

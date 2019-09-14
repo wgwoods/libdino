@@ -10,7 +10,7 @@
 #define DECLARE_ALGONAME(id, name)
 #endif
 
-#include "../config.h"
+#include "../libdino-config.h"
 
 #if LIBDINO_ZSTD
 # if ALGO_DOINCLUDES

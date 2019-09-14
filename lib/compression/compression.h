@@ -8,6 +8,9 @@
 #define COMPRESSNAME_LEN 5
 const char *CompressName[DINO_COMPRESSNUM+1];
 
+/* list of compression algorithms we've built with */
+const char *libdino_compression_available[DINO_COMPRESSNUM+1];
+
 Dino_CompressID compress_id(const char *name);
 const char *compress_name(Dino_CompressID id);
 int compress_avail(Dino_CompressID id);

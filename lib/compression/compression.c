@@ -1,6 +1,14 @@
 #include "../memory.h"
 #include "compression.h"
 
+/* list of compression algorithms we've built with */
+#define DECLARE_ALGONAME(id, name) name,
+const char *libdino_compression_available[] = {
+    "none",
+    #include "algo.inc"
+    NULL,
+};
+
 const char *CompressName[DINO_COMPRESSNUM+1] = {
     "none",
     "zlib",
