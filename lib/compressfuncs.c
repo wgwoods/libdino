@@ -1,3 +1,4 @@
+#include <string.h>
 #include "compression.h"
 #include "common.h"
 #include "config.h"
@@ -10,38 +11,33 @@ int compress_avail(Dino_CompressID id) {
     return (_get_ccfuncs(id) != NULL);
 }
 
-/* no-op functions for DINO_COMPRESS_NONE */
-/* TODO: these are really passthru, not noop */
-Dino_DCtx noop_create_dctx() { return (void*)(0xbeef1e57); }
-void noop_free_dctx(Dino_DCtx dctx) { dctx==(void*)0xbeef1e57; }
-int noop_setup_dstream(Dino_DStream *ds, Dino_DOpts dopts) {
-    dstream_realloc(ds, 4096, 4096); return 0;
+/* passthru functions for testing / DINO_COMPRESS_NONE */
+Dino_DCtx memcpy_create_dctx() { return (void*)(0xbeef1e57); }
+void memcpy_free_dctx(Dino_DCtx dctx) {  }
+#define memcpy_create_cctx ((Dino_CCtx (*)(void))memcpy_create_dctx)
+#define memcpy_free_cctx   ((void (*)(Dino_CCtx))memcpy_free_dctx)
+int memcpy_setup_dstream(Dino_DStream *ds, Dino_DOpts *dopts) {
+    ds->rec_inbuf_size = ds->rec_outbuf_size = 4096;
+    return 1;
 }
-
-size_t noop_decompress(Dino_DStream *ds) {
-    size_t insize = ds->inbuf->size - ds->inbuf->pos;
-    size_t max_out = ds->outbuf->size - ds->outbuf->pos;
+int memcpy_setup_cstream(Dino_CStream *cs, Dino_COpts *copts) {
+    cs->rec_inbuf_size = cs->rec_outbuf_size = 4096;
+    return 1;
+}
+size_t memcpy_compress(Dino_CStream *ds, inBuf *in, outBuf *out) {
+    size_t insize = in->size - in->pos;
+    size_t max_out = out->size - out->pos;
     size_t outsize = MIN(insize, max_out);
-    ds->inbuf->pos += outsize;
-    ds->outbuf->buf = (void *)ds->inbuf->buf;
-    ds->outbuf->pos = ds->inbuf->pos;
+    memcpy(out->buf+out->pos, in->buf+in->pos, outsize);
+    in->pos += outsize;
+    out->pos += outsize;
     return insize - outsize;
 }
-#define noop_create_cctx ((Dino_CCtx (*)(void))noop_create_dctx)
-#define noop_free_cctx   ((void (*)(Dino_CCtx))noop_free_dctx)
-int noop_setup_cstream(Dino_CStream *cs, Dino_COpts copts) {
-    cstream_realloc(cs, 4096, 4096); return 0;
-}
-size_t noop_compress(Dino_CStream *cs) {
-    size_t insize = cs->inbuf->size - cs->inbuf->pos;
-    size_t max_out = cs->outbuf->size - cs->outbuf->pos;
-    size_t outsize = MIN(insize, max_out);
-    cs->inbuf->pos += outsize;
-    cs->outbuf->buf = (void *)cs->inbuf->buf;
-    cs->outbuf->pos = cs->inbuf->pos;
-    return insize - outsize;
-}
+#define memcpy_decompress ((size_t (*)(Dino_DStream*, inBuf *, outBuf *))memcpy_compress)
+size_t memcpy_flush(Dino_CStream *cs, outBuf *outbuf) { return 0; }
 
+
+/* Here's our struct that holds decompression interfaces... */
 const Dino_DCFuncs dcfuncs[] = {
 #if LIBDINO_ZSTD
     { DINO_COMPRESS_ZSTD,
@@ -56,15 +52,16 @@ const Dino_DCFuncs dcfuncs[] = {
         xz_decompress  },
 #endif
     { DINO_COMPRESS_NONE,
-        noop_create_dctx, noop_free_dctx,
-        noop_setup_dstream,
-        noop_decompress },
+        memcpy_create_dctx, memcpy_free_dctx,
+        memcpy_setup_dstream,
+        memcpy_decompress },
     { DINO_COMPRESS_INVALID,
         NULL, NULL,
         NULL,
         NULL, },
 };
 
+/* And here's the compression interfaces */
 const Dino_CCFuncs ccfuncs[] = {
 #ifdef LIBDINO_ZSTD
     {
@@ -81,15 +78,16 @@ const Dino_CCFuncs ccfuncs[] = {
         xz_compress, xz_flush, xz_end },
 #endif
     { DINO_COMPRESS_NONE,
-        noop_create_cctx, noop_free_cctx,
-        noop_setup_cstream,
-        noop_compress, noop_compress, noop_compress },
+        memcpy_create_cctx, memcpy_free_cctx,
+        memcpy_setup_cstream,
+        memcpy_compress, memcpy_flush, memcpy_flush },
     { DINO_COMPRESS_INVALID,
         NULL, NULL,
         NULL,
         NULL, NULL, NULL },
 };
 
+/* lookup functions for dcfuncs/ccfuncs */
 const Dino_DCFuncs *_get_dcfuncs(Dino_CompressID id) {
     for (const Dino_DCFuncs *d=dcfuncs; d->decompress; d++)
         if (d->id == id)

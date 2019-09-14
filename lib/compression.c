@@ -29,7 +29,34 @@ const char *compress_name(Dino_CompressID id) {
     return NULL;
 }
 
-Dino_CStream *cstream_new(Dino_CompressID id) {
+Buf *buf_init(size_t size) {
+    Buf *buf = calloc(1, sizeof(Buf));
+    if (buf && !buf_realloc(buf, size))
+        return NULL;
+    return buf;
+}
+
+size_t buf_realloc(Buf *buf, size_t size) {
+    void *newbuf = realloc(buf->buf, size);
+    if (!newbuf)
+        return 0;
+    buf->buf = newbuf;
+    buf->size = size;
+    return size;
+}
+
+void buf_clear(Buf *buf) {
+    free(buf->buf);
+    buf->size = 0;
+    buf->pos = 0;
+}
+
+void buf_free(Buf *buf) {
+    free(buf->buf);
+    free(buf);
+}
+
+Dino_CStream *cstream_create(Dino_CompressID id) {
     const Dino_CCFuncs *funcs;
     if (!(funcs = _get_ccfuncs(id)))
         return NULL;
@@ -39,53 +66,52 @@ Dino_CStream *cstream_new(Dino_CompressID id) {
         return NULL;
 
     cs->funcs = funcs;
-    cs->inbuf = calloc(1, sizeof(inBuf));
-    cs->outbuf = calloc(1, sizeof(outBuf));
-    if (!(cs->funcs && cs->inbuf && cs->outbuf) || \
-        !(cs->cctx = cs->funcs->create_ctx())) {
+    cs->cctx = cs->funcs->create_ctx();
+
+    if (!cs->funcs->setup(cs, NULL)) {
         cstream_free(cs);
         return NULL;
     }
     return cs;
 }
 
-/* FIXME: better error codes */
-int _stream_realloc(inBuf *inbuf, outBuf *outbuf, size_t insize, size_t outsize) {
-    void *newin = realloc((void*)inbuf->buf, insize);
-    if (insize && !newin)
-        return -1;
-    inbuf->size = insize;
-    inbuf->buf = insize ? newin : NULL;
+/* FIXME what are the expected return values etc. here... */
 
-    void *newout = realloc(outbuf->buf, outsize);
-    if (outsize && !newout)
-        return -2;
-    outbuf->size = outsize;
-    outbuf->buf = outsize ? newout : NULL;
-    return 0;
+size_t cstream_compress_start(Dino_CStream *cstream, size_t size) {
+    return 0; /* FIXME: need a way to pass this to the cctx.. */
 }
 
-int cstream_setup(Dino_CStream *cs, Dino_COpts copts) {
-    return cs->funcs->setup(cs, copts);
+size_t cstream_compress(Dino_CStream *cstream, inBuf *in, outBuf *out) {
+    /* FIXME: error checking... */
+    return cstream->funcs->compress(cstream, in, out);
 }
 
-int cstream_realloc(Dino_CStream *cs, size_t insize, size_t outsize) {
-    return _stream_realloc(cs->inbuf, cs->outbuf, insize, outsize);
+size_t cstream_compress_end(Dino_CStream *cstream, outBuf *out) {
+    return cstream->funcs->end(cstream, out);
+}
+
+size_t cstream_compress1(Dino_CStream *cstream, inBuf *in, outBuf *out) {
+    /* FIXME error handling! */
+    cstream_compress_start(cstream, in->size);
+    cstream_compress(cstream, in, out);
+    cstream_compress_end(cstream, out);
+    /* FIXME I guess i'll return the bytes written? */
+    return out->pos;
+}
+
+size_t dstream_uncompress(Dino_DStream *dstream, inBuf *in, outBuf *out) {
+    return dstream->funcs->decompress(dstream, in, out);
 }
 
 void cstream_free(Dino_CStream *cs) {
     if (!cs)
         return;
-    if (cs->inbuf)
-        free(cs->inbuf);
-    if (cs->outbuf)
-        free(cs->outbuf);
     if (cs->funcs && cs->funcs->free_ctx && cs->cctx)
         cs->funcs->free_ctx(cs->cctx);
     free(cs);
 }
 
-Dino_DStream *dstream_new(Dino_CompressID id) {
+Dino_DStream *dstream_create(Dino_CompressID id) {
     const Dino_DCFuncs *funcs;
     if (!(funcs = _get_dcfuncs(id)))
         return NULL;
@@ -95,31 +121,18 @@ Dino_DStream *dstream_new(Dino_CompressID id) {
         return NULL;
 
     ds->funcs = funcs;
-    ds->inbuf = calloc(1, sizeof(inBuf));
-    ds->outbuf = calloc(1, sizeof(outBuf));
-    if (!(ds->funcs && ds->inbuf && ds->outbuf) || \
-        !(ds->dctx = ds->funcs->create_ctx())) {
+    ds->dctx = ds->funcs->create_ctx();
+
+    if (!(ds->funcs->setup(ds, NULL))) {
         dstream_free(ds);
         return NULL;
     }
     return ds;
 }
 
-int dstream_setup(Dino_DStream *ds, Dino_DOpts dopts) {
-    return ds->funcs->setup(ds, dopts);
-}
-
-int dstream_realloc(Dino_DStream *ds, size_t insize, size_t outsize) {
-    return _stream_realloc(ds->inbuf, ds->outbuf, insize, outsize);
-}
-
 void dstream_free(Dino_DStream *ds) {
     if (!ds)
         return;
-    if (ds->inbuf)
-        free(ds->inbuf);
-    if (ds->outbuf)
-        free(ds->outbuf);
     if (ds->funcs && ds->funcs->free_ctx && ds->dctx)
         ds->funcs->free_ctx(ds->dctx);
     free(ds);
