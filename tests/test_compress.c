@@ -1,5 +1,6 @@
 #include "munit.h"
 #include "../lib/compression/compression.h"
+#include "../lib/common.h"
 #include "../lib/config.h"
 
 #define INTPARAM(name) atoi(munit_parameters_get(params, name))
@@ -41,6 +42,13 @@ MunitResult test_stream_new(const MunitParameter params[], void* user_data) {
 #define CHUNKSIZE 64
 #define TESTBLOCK (CHUNKSIZE*16)
 
+size_t memcpy_repeat(void *dest, const void *src, size_t size, size_t count) {
+    size_t totalsize = size*count;
+    for (off_t off=0; off<totalsize; off+=size)
+        memcpy(dest+off, src, size);
+    return totalsize;
+}
+
 MunitResult test_compress1(const MunitParameter params[], void* user_data) {
     Dino_CompressID id = compress_id(munit_parameters_get(params, "algo"));
     Dino_CStream *cs = cstream_create(id);
@@ -57,9 +65,7 @@ MunitResult test_compress1(const MunitParameter params[], void* user_data) {
     /* make a test block of the same data repeated 16 times */
     uint8_t *randchunk = munit_malloc(CHUNKSIZE);
     munit_rand_memory(CHUNKSIZE, randchunk);
-    for (int c=0; c<(TESTBLOCK/CHUNKSIZE); c++)
-        memcpy((void *)inbuf->buf+(c*CHUNKSIZE), randchunk, CHUNKSIZE);
-    inbuf->size = TESTBLOCK;
+    inbuf->size = memcpy_repeat((void *)inbuf->buf, randchunk, CHUNKSIZE, 16);
 
     /* compress it! */
     cstream_compress1(cs, inbuf, outbuf);
@@ -100,6 +106,46 @@ MunitResult test_compress1(const MunitParameter params[], void* user_data) {
     return MUNIT_OK;
 }
 
+MunitResult test_compress_buf_pos(const MunitParameter params[], void* user_data) {
+    /* set up cstream */
+    Dino_CompressID id = compress_id(munit_parameters_get(params, "algo"));
+    Dino_CStream *cs = cstream_create(id);
+    /* make sure bufsize is a multiple of 8 */
+    size_t bufsize = MAX(cs->rec_inbuf_size, cs->rec_outbuf_size) & (~7);
+    Buf *a = buf_init(bufsize);
+    Buf *b = buf_init(bufsize);
+    if (!a || !b)
+        return MUNIT_ERROR;
+
+    /* zero both buffers */
+    memset((void *)a->buf, 0, a->size);
+    memset((void *)b->buf, 0, b->size);
+
+    /* fill half of Buf a with a random int */
+    a->size >>= 1;
+    uint32_t randint = munit_rand_uint32();
+    for (size_t i=0; i<a->size; i+=sizeof(uint32_t))
+        *(uint32_t*)(a->buf+i) = randint;
+
+    /* Compress it to somewhere in Buf b */
+    b->pos = 8;
+    cstream_compress1(cs, (inBuf *)a, b);
+    /* Check that the bytes before b->pos are still 0 */
+    munit_assert_size(b->pos, >, 8);
+    munit_assert_size(a->pos, ==, a->size);
+    munit_assert_memory_equal(8, b->buf, a->buf+(bufsize-8));
+    /* decompress the output to fill the second half of Buf a */
+    Dino_DStream *ds = dstream_create(id);
+    a->size = bufsize;
+    b->size = bufsize;
+    a->pos = bufsize >> 1;
+    b->pos = 8;
+    dstream_decompress(ds, (inBuf *)b, a);
+    /* Check that Buf a is full and that its left and right half are equal */
+    munit_assert_size(a->pos, ==, a->size);
+    munit_assert_memory_equal(bufsize>>1, a->buf, a->buf+(bufsize>>1));
+    return MUNIT_OK;
+}
 
 /* TODO: this is kind of dumb */
 static char *avail_algos[] = {
@@ -117,6 +163,7 @@ static MunitParameterEnum compr_params[] = {
 
 MunitTest compr_tests[] = {
     { "/new", test_stream_new, NULL, NULL, MUNIT_TEST_OPTION_NONE, compr_params },
+    { "/buf_pos", test_compress_buf_pos, NULL, NULL, MUNIT_TEST_OPTION_NONE, compr_params },
     { "/compress1", test_compress1, NULL, NULL, MUNIT_TEST_OPTION_NONE, compr_params },
     /* End-of-array marker */
     { NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
