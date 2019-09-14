@@ -23,6 +23,7 @@ lib_sources = [
     'compression/funcs.c',
     'dino_begin.c',
     'index.c',
+    'memory.c',
     'namtab.c',
     'sectab.c',
 ]

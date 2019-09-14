@@ -5,16 +5,15 @@
 
 #include "dino.h"
 #include "libdino.h"
+#include "common.h"
 
-#define MAX(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     (_a > _b) ? _a : _b; })
-#define MIN(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     (_a < _b) ? _a : _b; })
+#define GOOD_MAGIC(dhdr) \
+   ((DINO_MAGIC_V0[0] == dhdr.magic[0]) && \
+    (DINO_MAGIC_V0[1] == dhdr.magic[1]) && \
+    (DINO_MAGIC_V0[2] == dhdr.magic[2]) && \
+    (DINO_MAGIC_V0[3] == dhdr.magic[3]&0xf0))
 
+#define DINO_MAJOR_VER(dhdr) (GOOD_MAGIC(dhdr) ? dhdr.magic[3] & 0x0f : -1)
 
 /* A linked list of Dino_Data descriptors makes up section contents. */
 typedef struct Dino_Data_List {

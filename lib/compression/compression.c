@@ -1,5 +1,4 @@
-#include <stdlib.h>
-#include <string.h>
+#include "../memory.h"
 #include "compression.h"
 
 const char *CompressName[DINO_COMPRESSNUM+1] = {

@@ -1,5 +1,4 @@
 #include "libdino_internal.h"
-#include "system.h"
 
 void dino_data_free(Dino_Data dd) {
     dd.off=0;

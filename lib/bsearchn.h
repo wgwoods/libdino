@@ -1,9 +1,7 @@
 #ifndef _BSEARCHN_H
 #define _BSEARCHN_H 1
 
-#include <stddef.h>
-#include <string.h>
-#include <sys/types.h>
+#include "memory.h"
 
 /* bsearchn_cmp() is basically identical to bsearch(), except the comparison
  * function gets `size` as a third argument so it doesn't walk off into

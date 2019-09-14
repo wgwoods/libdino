@@ -1,18 +1,10 @@
-#define _GNU_SOURCE
+#define _GNU_SOURCE /* need this for qsort_r in stdlib.h */
+
 #include "libdino_internal.h"
 #include "bsearchn.h"
-#include "system.h"
+#include "memory.h"
+#include "fileio.h"
 #include "array.h"
-
-static size_t PAGESIZE = 4096;
-static size_t CHONKSIZE = 4096<<10;
-
-void __attribute__ ((constructor)) _array_init_static_vars(void) {
-    long sys_pagesize = sysconf(_SC_PAGESIZE);
-    if (sys_pagesize > 0) PAGESIZE = sys_pagesize;
-    long sys_chonksize = sysconf(_SC_LEVEL3_CACHE_SIZE);
-    if (sys_chonksize > 0) CHONKSIZE = sys_chonksize;
-}
 
 ssize_t array_realloc(Array *a, size_t alloc_count) {
     if (!a)

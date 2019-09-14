@@ -1,5 +1,5 @@
 #include "libdino_internal.h"
-#include "system.h"
+#include "fileio.h"
 
 Dino_Sectab *new_sectab(Dino_Secidx alloc_count) {
     Dino_Sectab *sectab = calloc(1, sizeof(Dino_Sectab));

@@ -1,7 +1,7 @@
 #include "libdino_internal.h"
 #include "bsearchn.h"
+#include "fileio.h"
 #include "array.h"
-#include "system.h"
 
 /* TODO: fanout could probably be optional? I mean, it's only 1Kb of data,
  * so it's not a huge problem, but it also probably doesn't help much for

@@ -1,6 +1,6 @@
-#include "common.h"
-#include "system.h"
-#include "libdino.h"
+#include "memory.h"
+#include "fileio.h"
+#include "libdino_internal.h"
 
 ssize_t read_dhdr(int fd, Dino *dino) {
     ssize_t nread = pread_retry(fd, &(dino->dhdr), sizeof(Dino_Dhdr), 0);
@@ -97,6 +97,19 @@ ssize_t read_namtab(int fd, Dino *dino) {
     dino->namtab.size = nread;
     dino->namtab.data = namtabdata;
     return nread;
+}
+
+static inline Dino *allocate_dino(int fd, size_t filesize) {
+    Dino *d = (Dino *) calloc(1, sizeof(Dino));
+    if (d != NULL) {
+        d->fd = fd;
+        d->filesize = filesize;
+    }
+    return d;
+}
+
+static inline Dino *new_dino(void) {
+    return allocate_dino(-1, ~0);
 }
 
 Dino *read_dino(int fd) {

@@ -1,22 +1,13 @@
 #ifndef _COMMON_H
 #define _COMMON_H 1
 
-#include <stdlib.h>
-
-#include "libdino.h"
-#include "libdino_internal.h"
-
-static inline Dino *allocate_dino(int fd, size_t filesize) {
-    Dino *d = (Dino *) calloc(1, sizeof(Dino));
-    if (d != NULL) {
-        d->fd = fd;
-        d->filesize = filesize;
-    }
-    return d;
-}
-
-static inline Dino *new_dino(void) {
-    return allocate_dino(-1, ~0);
-}
+#define MAX(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     (_a > _b) ? _a : _b; })
+#define MIN(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     (_a < _b) ? _a : _b; })
 
 #endif /* _COMMON_H */

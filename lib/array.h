@@ -1,8 +1,6 @@
 #ifndef _ARRAY_H
 #define _ARRAY_H 1
 
-#define _GNU_SOURCE
-
 #include <sys/types.h>
 #include <stdlib.h>
 #include <unistd.h>

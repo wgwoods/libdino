@@ -1,5 +1,5 @@
-#ifndef _SYSTEM_H
-#define _SYSTEM_H 1
+#ifndef _FILEIO_H
+#define _FILEIO_H 1
 
 #include <errno.h>
 #include <unistd.h>
@@ -55,4 +55,4 @@ pread_retry (int fd, void *buf, size_t len, off_t off)
   return recvd;
 }
 
-#endif /* _SYSTEM_H */
+#endif /* _FILEIO_H */
