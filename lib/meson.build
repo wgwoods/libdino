@@ -28,6 +28,10 @@ lib_sources = [
     'sectab.c',
 ]
 
+if lzma.found()
+  lib_sources += 'compression/xz.c'
+endif
+
 if zstd.found()
   lib_sources += 'compression/zstd.c'
 endif
