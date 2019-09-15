@@ -43,11 +43,11 @@ const Dino_DCFuncs dcfuncs[] = {
         zstd_setup_dstream,
         zstd_decompress },
 #endif
-#if LIBDINO_LZMA
+#if LIBDINO_XZ
     { DINO_COMPRESS_XZ,
         xz_create_dctx, xz_free_dctx,
         xz_setup_dstream,
-        xz_decompress  },
+        xz_decompress },
 #endif
     { DINO_COMPRESS_NONE,
         memcpy_create_dctx, memcpy_free_dctx,
@@ -69,10 +69,10 @@ const Dino_CCFuncs ccfuncs[] = {
         zstd_compress, zstd_flush, zstd_end
     },
 #endif
-#if LIBDINO_LZMA
+#if LIBDINO_XZ
     { DINO_COMPRESS_XZ,
         xz_create_cctx, xz_free_cctx,
-        xz_setup_dstream,
+        xz_setup_cstream,
         xz_compress, xz_flush, xz_end },
 #endif
     { DINO_COMPRESS_NONE,
