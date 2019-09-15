@@ -15,6 +15,9 @@ Dino_CompressID compress_id(const char *name);
 const char *compress_name(Dino_CompressID id);
 int compress_avail(Dino_CompressID id);
 
+
+#define DEFAULT_BUFSIZE (1<<17)
+
 typedef struct Buf {
     void *buf;
     size_t size;
@@ -27,6 +30,7 @@ typedef struct inBuf {
     size_t size;
     size_t pos;
 } inBuf;
+
 
 /* NOTE: interesting compression options for each algorithm:
  * zlib: int level, method, windowBits, memLevel, strategy;
@@ -61,6 +65,7 @@ typedef struct Dino_COpts {
     size_t dictsize;    /* dictionary data size */
     uint8_t *dictdata;  /* dictionary data */
     void *params;       /* other algo-specific parameter data */
+    /* TODO: flags to enable/disable reading/writing checksums */
 } Dino_COpts;
 typedef struct Dino_COpts Dino_DOpts;
 
@@ -146,8 +151,23 @@ typedef struct Dino_CCFuncs {
     Dino_CCtx (*create_ctx)(void);
     void (*free_ctx)(Dino_CCtx);
     int (*setup)(Dino_CStream*, Dino_COpts*);
+
+    /* compress(): compress data from inbuf->buf[pos:size] to outbuf->buf[pos]
+     * inbuf->pos += bytes_read and outbuf->pos += bytes_written
+     * return value is a hint for how many bytes to read into inbuf. */
     size_t (*compress)(Dino_CStream*, inBuf*, outBuf*);
+
+    /* flush(): flush internal buffers to outbuf->buf[pos]
+     * outbuf->pos += bytes_written
+     * return value is 0 if flush completed, or an error code (TODO),
+     * or a hint about how many bytes are still left to flush. */
+    /* TODO: should we guarantee that flush() completes a block and
+     * end() completes a frame? */
     size_t (*flush)(Dino_CStream*, outBuf *);
+
+    /* end(): flush buffers and finalize current stream to outbuf->buf[pos]
+     * updates outbuf->pos
+     * return value same as flush(). */
     size_t (*end)(Dino_CStream*, outBuf *);
 } Dino_CCFuncs;
 
@@ -175,8 +195,16 @@ typedef struct Dino_CStream {
 typedef struct Dino_DStream {
     size_t rec_inbuf_size;
     size_t rec_outbuf_size;
-    Dino_DCtx *dctx;
+    Dino_DCtx dctx;
     const Dino_DCFuncs *funcs;
 } Dino_DStream;
+
+/* TODO: better error codes */
+
+#define COMPRESS_ERR_UNK ((size_t)~0)
+#define COMPRESS_ERR_MEM (COMPRESS_ERR_UNK-1)
+#define COMPRESS_LASTERR COMPRESS_ERR_MEM
+#define COMPRESS_MAXSIZE (COMPRESS_LASTERR-1)
+#define IS_COMPRESS_ERR(r) (r >= COMPRESS_LASTERR)
 
 #endif /* _COMPRESSION_H */
