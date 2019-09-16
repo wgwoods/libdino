@@ -22,6 +22,7 @@ lib_sources = [
     'compression/compression.c',
     'compression/funcs.c',
     'dino_begin.c',
+    'digest.c',
     'index.c',
     'memory.c',
     'namtab.c',

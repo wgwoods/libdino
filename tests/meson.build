@@ -14,6 +14,10 @@ array_exe = executable('test_array', 'test_array.c',
 compr_exe = executable('test_compress', 'test_compress.c',
                        dependencies: munit_dep,
                        link_with: libdino)
+digest_exe = executable('test_digest', 'test_digest.c',
+                       dependencies: munit_dep,
+                       link_with: libdino)
 test('array', array_exe)
 test('compr', compr_exe)
+test('digest', digest_exe)
 test('munit', munit_exe)

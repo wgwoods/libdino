@@ -1,5 +1,13 @@
+#include <string.h>
+#include <openssl/evp.h>
+
 #include "digest.h"
 #include "dino.h"
+
+typedef struct Hasher {
+    const EVP_MD *type;
+    EVP_MD_CTX *ctx;
+} Hasher;
 
 typedef struct digestInfo_s {
     Dino_DigestID id;
@@ -23,15 +31,66 @@ static const digestInfo_t digestInfo[] = {
     { DINO_DIGEST_SHA512,    "sha512",    EVP_sha512,    64, 0},
     { DINO_DIGEST_SHA224,    "sha224",    EVP_sha224,    28, 0},
 };
+#define DIGESTNAME_MAX 10
 
 static inline const digestInfo_t get_digestinfo(Dino_DigestID d) {
     return digestInfo[d < DINO_DIGESTNUM ? d : 0];
 }
-
-uint8_t digest_size(Dino_DigestID d) {
-    return get_digestinfo(d).size;
+uint8_t digest_size(Dino_DigestID d) { return get_digestinfo(d).size; }
+const char *digest_name(Dino_DigestID d) { return get_digestinfo(d).name; }
+/* This could probably be more clever. */
+Dino_DigestID digest_id(const char *name) {
+    for (int d=0; d < DINO_DIGESTNUM; d++)
+        if (strncmp(name, digestInfo[d].name, DIGESTNAME_MAX) == 0)
+            return digestInfo[d].id;
+    return DINO_DIGEST_UNKNOWN;
 }
 
-const char *digest_name(Dino_DigestID d) {
-    return get_digestinfo(d).name;
+Hasher *hasher_create(Dino_DigestID d) {
+    digestInfo_t dig = get_digestinfo(d);
+    if (dig.id == DINO_DIGEST_UNKNOWN)
+        return NULL;
+
+    Hasher *h;
+    if (!(h = calloc(1, sizeof(Hasher))))
+        return NULL;
+
+    h->type = dig.mdfn();
+    h->ctx = EVP_MD_CTX_new();
+
+    if (!h->type || !h->ctx) {
+        hasher_free(h);
+        return NULL;
+    }
+
+    return h;
+}
+
+int hasher_start(Hasher *h) {
+    return EVP_DigestInit(h->ctx, h->type);
+}
+
+int hasher_update(Hasher *h, void *d, size_t len) {
+    return EVP_DigestUpdate(h->ctx, d, len);
+}
+
+int hasher_finish(Hasher *h, uint8_t *out) {
+    return EVP_DigestFinal(h->ctx, out, NULL);
+}
+
+int hasher_getdigest(Hasher *h, uint8_t *out) {
+    int r = 0;
+    EVP_MD_CTX *ctx_copy = EVP_MD_CTX_new();
+    if (ctx_copy && EVP_MD_CTX_copy(ctx_copy, h->ctx))
+        r = EVP_DigestFinal_ex(ctx_copy, out, NULL);
+    EVP_MD_CTX_free(ctx_copy);
+    return r;
+}
+
+void hasher_free(Hasher *h) {
+    if (!h)
+        return;
+    if (h->ctx)
+        EVP_MD_CTX_free(h->ctx);
+    free(h);
 }
