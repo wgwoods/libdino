@@ -67,7 +67,7 @@ Hasher *hasher_create(Dino_DigestID d) {
 }
 
 int hasher_start(Hasher *h) {
-    return EVP_DigestInit(h->ctx, h->type);
+    return EVP_DigestInit_ex(h->ctx, h->type, NULL);
 }
 
 int hasher_update(Hasher *h, void *d, size_t len) {
@@ -75,16 +75,34 @@ int hasher_update(Hasher *h, void *d, size_t len) {
 }
 
 int hasher_finish(Hasher *h, uint8_t *out) {
-    return EVP_DigestFinal(h->ctx, out, NULL);
+    return EVP_DigestFinal_ex(h->ctx, out, NULL);
 }
 
 int hasher_getdigest(Hasher *h, uint8_t *out) {
     int r = 0;
     EVP_MD_CTX *ctx_copy = EVP_MD_CTX_new();
-    if (ctx_copy && EVP_MD_CTX_copy(ctx_copy, h->ctx))
+    if (ctx_copy && EVP_MD_CTX_copy_ex(ctx_copy, h->ctx))
         r = EVP_DigestFinal_ex(ctx_copy, out, NULL);
     EVP_MD_CTX_free(ctx_copy);
     return r;
+}
+
+int hasher_verify(Hasher *h, const uint8_t *exp_digest) {
+    int digestsize = hasher_size(h);
+    uint8_t *digest = malloc(digestsize);
+    if (!digest || !hasher_getdigest(h, digest))
+        return 0;
+    int r = memcmp(digest, exp_digest, digestsize);
+    free(digest);
+    return (r == 0);
+}
+
+int hasher_size(Hasher *h) {
+    return EVP_MD_size(h->type);
+}
+
+int hasher_blocksize(Hasher *h) {
+    return EVP_MD_block_size(h->type);
 }
 
 void hasher_free(Hasher *h) {
