@@ -58,7 +58,7 @@ Dino_CStream *cstream_create(Dino_CompressID id) {
 /* FIXME what are the expected return values etc. here... */
 
 size_t cstream_compress_start(Dino_CStream *cstream, size_t size) {
-    return 0; /* FIXME: need a way to pass this to the cctx.. */
+    return cstream->funcs->setsize(cstream, size);
 }
 
 size_t cstream_compress(Dino_CStream *cstream, inBuf *in, outBuf *out) {
@@ -81,6 +81,10 @@ size_t cstream_compress1(Dino_CStream *cstream, inBuf *in, outBuf *out) {
 
 size_t dstream_decompress(Dino_DStream *dstream, inBuf *in, outBuf *out) {
     return dstream->funcs->decompress(dstream, in, out);
+}
+
+size_t dstream_get_uncompressed_size(Dino_DStream *dstream, inBuf *in) {
+    return dstream->funcs->getsize(dstream, in);
 }
 
 void cstream_free(Dino_CStream *cs) {

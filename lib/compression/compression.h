@@ -108,9 +108,16 @@ size_t cstream_compress1(Dino_CStream *cstream, inBuf *in, outBuf *out);
  *   an error code (TODO!!), or
  *   any other positive value, which is the suggested number of bytes to read.
  * (zstd says that the suggested size will never be larger than the rest of
- * the frame. Not sure about other decoders, though. */
+ * the frame. Not sure about other decoders, though...) */
 size_t dstream_decompress(Dino_DStream *dstream, inBuf *in, outBuf *out);
 
+/* dstream_get_uncompressed_size: read the uncompressed content size from
+ * the frame header, pointed to by inbuf->buf[pos].
+ * Returns the size - which may be 0 for an empty frame,
+ *   or UNCOMPRESS_SIZE_UNKNOWN if the size is unknown,
+ *   or UNCOMPRESS_SIZE_ERROR if inbuf isn't pointing to the header.
+ */
+size_t dstream_get_uncompressed_size(Dino_DStream *dstream, inBuf *in);
 
 /* Below here we start getting into the internals of how the generic
  * compression stuff works. Unless you're adding a new compression
@@ -127,6 +134,15 @@ typedef struct Dino_CCFuncs {
     Dino_CCtx (*create_ctx)(void);
     void (*free_ctx)(Dino_CCtx);
     int (*setup)(Dino_CStream*, Dino_COpts*);
+
+    /* setsize(): tell the compressor the total uncompressed size of the data
+     * that's about to be compressed, so that it can be written into the
+     * output frame, so we can get it back later with getsize().
+     * must be called before the first call to compress().
+     * return value is the input size, or COMPRESS_ERR_STG if you try to
+     * call it in the middle of a frame, or COMPRESS_ERR_UNK if something
+     * else goes wrong. */
+    size_t (*setsize)(Dino_CStream*, size_t);
 
     /* compress(): compress data from inbuf->buf[pos:size] to outbuf->buf[pos]
      * inbuf->pos += bytes_read and outbuf->pos += bytes_written
@@ -153,7 +169,23 @@ typedef struct Dino_DCFuncs {
     Dino_DCtx (*create_ctx)(void);
     void (*free_ctx)(Dino_DCtx);
     int (*setup)(Dino_DStream*, Dino_DOpts*);
+
+    /* getsize(): return the uncompressed size of the compressed data frame
+     * that starts at inbuf[pos].
+     * returns UNCOMPRESS_SIZE_UNKNOWN if the compressor didn't do setsize(),
+     * or COMPRESS_ERR_STG if we can't find the size (like if inbuf[pos] isn't
+     * pointing to the start of the frame header). */
+    size_t (*getsize)(Dino_DStream*, inBuf*);
+
+    /* decompress(): decompress data from inbuf->buf[pos:size] out to
+     * outbuf->buf[pos].
+     * inbuf->pos += bytes_read and outbuf->pos += bytes_written.
+     * returns 0 if the frame is completely decoded / flushed,
+     *  or a COMPRESS_ERR_* error code,
+     *  or any other value > 0, which means there's still data to be
+     *  decoded or flushed, and gives a suggested next input size. */
     size_t (*decompress)(Dino_DStream*, inBuf*, outBuf*);
+
 } Dino_DCFuncs;
 
 /* getters for looking up [CD]CFuncs by id */
@@ -179,8 +211,17 @@ typedef struct Dino_DStream {
 
 #define COMPRESS_ERR_UNK ((size_t)~0)
 #define COMPRESS_ERR_MEM (COMPRESS_ERR_UNK-1)
-#define COMPRESS_LASTERR COMPRESS_ERR_MEM
-#define COMPRESS_MAXSIZE (COMPRESS_LASTERR-1)
-#define IS_COMPRESS_ERR(r) (r >= COMPRESS_LASTERR)
+#define COMPRESS_ERR_STG (COMPRESS_ERR_UNK-2)
+#define COMPRESS_ERR_BIG (COMPRESS_ERR_UNK-3)
+#define COMPRESS_ERR_BUF (COMPRESS_ERR_UNK-4)
+#define COMPRESS_ERR_HDR (COMPRESS_ERR_UNK-5)
+#define COMPRESS_MAXSIZE (COMPRESS_ERR_UNK-6)
+#define IS_COMPRESS_ERR(r) (r > COMPRESS_MAXSIZE)
+
+#define UNCOMPRESS_SIZE_UNKNOWN (COMPRESS_ERR_UNK)
+#define UNCOMPRESS_SIZE_ERROR   (UNCOMPRESS_SIZE_UNKNOWN-1)
+#define UNCOMPRESS_SIZE_MAX     (UNCOMPRESS_SIZE_UNKNOWN-2)
+#define IS_SIZE_ERR(r)          (r > UNCOMPRESS_SIZE_MAX)
+
 
 #endif /* _COMPRESSION_H */

@@ -72,24 +72,23 @@ MunitResult test_compress1(const MunitParameter params[], void* user_data) {
     /* compress it! */
     cstream_compress1(cs, inbuf, outbuf);
     munit_assert_size(inbuf->pos, ==, inbuf->size);
-    if (id == DINO_COMPRESS_NONE) {
-        munit_assert_size(outbuf->pos, ==, inbuf->size);
-        munit_assert_memory_equal(inbuf->size, inbuf->buf, outbuf->buf);
-    } else {
-        munit_assert_size(outbuf->pos, >, 0);
-        munit_assert_memory_not_equal(outbuf->pos, inbuf->buf, outbuf->buf);
-    }
+    munit_assert_size(outbuf->pos, >, 0);
+    munit_assert_memory_not_equal(outbuf->pos, inbuf->buf, outbuf->buf);
 
     /* now see if we can uncompress it */
     Dino_DStream *ds = dstream_create(id);
 
+    /* check if we have the original size */
+    size_t output_size = outbuf->pos;
+    outbuf->pos = 0;
+    munit_assert_size(dstream_get_uncompressed_size(ds, (inBuf *)outbuf), ==, inbuf->size);
+    outbuf->pos = output_size;
+
     /* reset inbuf to its original size and clear it out */
     inbuf->size = cs->rec_inbuf_size;
     inbuf->pos = 0;
-    if (id) {
-        memset((void *)inbuf->buf, 0, inbuf->size);
-        munit_assert_memory_not_equal(CHUNKSIZE, randchunk, outbuf->buf);
-    }
+    memset((void *)inbuf->buf, 0, inbuf->size);
+    munit_assert_memory_not_equal(CHUNKSIZE, randchunk, outbuf->buf);
     /* make outbuf the size of the output data */
     outbuf->size = outbuf->pos;
     outbuf->pos = 0;
@@ -148,6 +147,10 @@ MunitResult test_compress_buf_pos(const MunitParameter params[], void* user_data
     munit_assert_memory_equal(bufsize>>1, a->buf, a->buf+(bufsize>>1));
     return MUNIT_OK;
 }
+
+/* TODO: test flush/end with insufficient buffer space */
+/* TODO: test compression with multiple steps */
+/* TODO: test getsize/setsize */
 
 static MunitParameterEnum compr_params[] = {
     { (char*) "algo", (char **)libdino_compression_available },

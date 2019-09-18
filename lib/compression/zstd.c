@@ -29,6 +29,30 @@ int zstd_setup_dstream(Dino_DStream *d, Dino_DOpts *dopts) {
     return 0;
 }
 
+size_t zstd_setsize(Dino_CStream *c, size_t srcsize) {
+    size_t r = ZSTD_CCtx_setPledgedSrcSize(c->cctx, srcsize);
+    if (ZSTD_isError(r))
+        return COMPRESS_ERR_STG;
+    return r;
+}
+
+size_t zstd_getsize(Dino_DStream *d, inBuf *inbuf) {
+    void *src = (void*)inbuf->buf + inbuf->pos;
+    /* The zstd (1.4.2) public API docs mention "ZSTD_frameHeaderSize_max",
+     * which has been removed from the public API. There is a #define for
+     * ZSTD_FRAMEHEADERSIZE_MAX, but it's part of the "Experimental" API and
+     * can't be included here. There's also a ZSTD_frameHeaderSize() function,
+     * which also isn't part of the public API. So.. */
+    size_t header_max_size = inbuf->size - inbuf->pos;
+
+    unsigned long long size = ZSTD_getFrameContentSize(src, header_max_size);
+    if (size == ZSTD_CONTENTSIZE_UNKNOWN)
+        return UNCOMPRESS_SIZE_UNKNOWN;
+    else if (size == ZSTD_CONTENTSIZE_ERROR)
+        return UNCOMPRESS_SIZE_ERROR;
+    return size;
+}
+
 size_t zstd_decompress(Dino_DStream *d, inBuf *inbuf, outBuf *outbuf) {
     ZSTD_inBuffer zib = { inbuf->buf, inbuf->size, inbuf->pos };
     ZSTD_outBuffer zob = { outbuf->buf, outbuf->size, outbuf->pos };
