@@ -36,33 +36,6 @@ const char *compress_name(Dino_CompressID id) {
     return NULL;
 }
 
-Buf *buf_init(size_t size) {
-    Buf *buf = calloc(1, sizeof(Buf));
-    if (buf && !buf_realloc(buf, size))
-        return NULL;
-    return buf;
-}
-
-size_t buf_realloc(Buf *buf, size_t size) {
-    void *newbuf = realloc(buf->buf, size);
-    if (!newbuf)
-        return 0;
-    buf->buf = newbuf;
-    buf->size = size;
-    return size;
-}
-
-void buf_clear(Buf *buf) {
-    free(buf->buf);
-    buf->size = 0;
-    buf->pos = 0;
-}
-
-void buf_free(Buf *buf) {
-    free(buf->buf);
-    free(buf);
-}
-
 Dino_CStream *cstream_create(Dino_CompressID id) {
     const Dino_CCFuncs *funcs;
     if (!(funcs = _get_ccfuncs(id)))

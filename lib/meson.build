@@ -19,6 +19,7 @@ config_h = configure_file(input: 'libdino-config.h.in',
 lib_sources = [
     'array.c',
     'bsearchn.c',
+    'buf.c',
     'compression/compression.c',
     'compression/funcs.c',
     'dino_begin.c',

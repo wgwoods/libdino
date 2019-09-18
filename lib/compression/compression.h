@@ -4,6 +4,7 @@
 
 #include <stddef.h>
 #include "../dino.h"
+#include "../buf.h"
 
 #define COMPRESSNAME_LEN 5
 const char *CompressName[DINO_COMPRESSNUM+1];
@@ -17,20 +18,6 @@ int compress_avail(Dino_CompressID id);
 
 
 #define DEFAULT_BUFSIZE (1<<17)
-
-typedef struct Buf {
-    void *buf;
-    size_t size;
-    size_t pos;
-} Buf;
-typedef struct Buf outBuf;
-
-typedef struct inBuf {
-    const void *buf;
-    size_t size;
-    size_t pos;
-} inBuf;
-
 
 /* NOTE: interesting compression options for each algorithm:
  * zlib: int level, method, windowBits, memLevel, strategy;
@@ -79,17 +66,6 @@ typedef struct Dino_DStream Dino_DStream;
  * These are the functions that we should be using in the rest of the
  * library; none of the internal machinery is exposed, which is
  * nice.*/
-
-
-/* Buffer management functions */
-Buf *buf_init(size_t size);
-#define inbuf_init(size) ((inBuf *)buf_init(size))
-#define outbuf_init(size) ((outBuf *)buf_init(size))
-size_t buf_realloc(Buf *buf, size_t size);
-void buf_clear(Buf *buf);
-void buf_free(Buf *buf);
-#define inbuf_free(buf) buf_free((Buf *)buf)
-#define outbuf_free(buf) buf_free((Buf *)buf)
 
 /* Stream management */
 Dino_CStream *cstream_create(Dino_CompressID id);
