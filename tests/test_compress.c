@@ -81,7 +81,9 @@ MunitResult test_compress1(const MunitParameter params[], void* user_data) {
     /* check if we have the original size */
     size_t output_size = outbuf->pos;
     outbuf->pos = 0;
-    munit_assert_size(dstream_get_uncompressed_size(ds, (inBuf *)outbuf), ==, inbuf->size);
+    size_t orig_size = dstream_get_uncompressed_size(ds, (inBuf *)outbuf);
+    if (!IS_SIZE_ERR(orig_size))
+        munit_assert_size(orig_size, ==, inbuf->size);
     outbuf->pos = output_size;
 
     /* reset inbuf to its original size and clear it out */

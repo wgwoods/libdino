@@ -1,7 +1,6 @@
 # compression options
 option('zstd', type:'feature', value:'enabled')
-#option('xz',   type:'feature', value:'enabled')
-option('xz',   type:'feature', value:'disabled')
+option('xz',   type:'feature', value:'enabled')
 option('zlib', type:'feature', value:'disabled')
 
 # TODO: this should probably be a separate project

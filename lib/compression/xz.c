@@ -39,6 +39,16 @@ int xz_setup_cstream(Dino_CStream *c, Dino_COpts *copts) {
     return 0;
 }
 
+/* TODO: implement these...
+ * size_t xz_getsize(Dino_DStream *d, inBuf *inbuf) { return UNCOMPRESS_SIZE_UNKNOWN; }
+ * size_t xz_setsize(Dino_CStream *c, size_t srcsize) { return srcsize; }
+ *
+ * UNFORTUNATELY since xz puts the uncompressed content size in the stream
+ * _footer_, this really isn't going to work out for simple stream I/O.
+ * It's still feasible - you'd just have to pass in the _end_ of the stream
+ * rather than the start.
+ */
+
 size_t xz_compress(Dino_CStream *c, inBuf *inbuf, outBuf *outbuf) {
     lzma_stream *strm = c->cctx;
     lzma_ret ret;

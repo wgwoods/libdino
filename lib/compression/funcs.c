@@ -123,6 +123,15 @@ size_t memcpy_decompress(Dino_DStream *ds, inBuf *in, outBuf *out) {
     return MIN(ds->rec_inbuf_size, ctx->srcsize-ctx->bytes_in);
 }
 
+/* Here's some no-op placeholder functions for optional stuff */
+size_t noop_getsize(Dino_DStream *d, inBuf *inbuf) {
+    return UNCOMPRESS_SIZE_UNKNOWN;
+}
+
+size_t noop_setsize(Dino_CStream *c, size_t srcsize) {
+    return srcsize;
+}
+
 /* Do the #includes for all the algorithms we're including */
 #define ALGO_DOINCLUDES 1
 #include "algo.inc"
@@ -138,7 +147,7 @@ const Dino_DCFuncs dcfuncs[] = {
 #if LIBDINO_XZ
     { DINO_COMPRESS_XZ,
         xz_create_dctx, xz_free_dctx,
-        xz_setup_dstream,
+        xz_setup_dstream, noop_getsize,
         xz_decompress },
 #endif
     { DINO_COMPRESS_NONE,
@@ -164,7 +173,7 @@ const Dino_CCFuncs ccfuncs[] = {
 #if LIBDINO_XZ
     { DINO_COMPRESS_XZ,
         xz_create_cctx, xz_free_cctx,
-        xz_setup_cstream,
+        xz_setup_cstream, noop_setsize,
         xz_compress, xz_flush, xz_end },
 #endif
     { DINO_COMPRESS_NONE,
