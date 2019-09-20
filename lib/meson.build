@@ -28,6 +28,7 @@ lib_sources = [
     'memory.c',
     'namtab.c',
     'sectab.c',
+    'varint.c',
 ]
 
 if lzma.found()
