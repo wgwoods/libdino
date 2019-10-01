@@ -23,7 +23,9 @@ Array *array_new(size_t isize);
 Array *array_init(size_t isize);
 Array *array_with_capacity(size_t isize, size_t alloc_count);
 Array *array_from_buf(void *buf, size_t isize, size_t count);
-Array *array_read(int fd, off_t offset, size_t isize, size_t count);
+Array *array_load(Array *a, int fd, off_t offset, size_t count);
+#define array_read(fd, off, isize, count) \
+    (array_load(array_new(isize), fd, off, count))
 
 ssize_t array_realloc(Array *a, size_t alloc_count);
 ssize_t array_grow(Array *a);

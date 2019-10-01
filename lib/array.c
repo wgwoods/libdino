@@ -64,13 +64,15 @@ Array *array_from_buf(void *buf, size_t isize, size_t count) {
     return a;
 }
 
-Array *array_read(int fd, off_t offset, size_t isize, size_t count) {
-    ssize_t r;
-    Array *a = array_with_capacity(isize, count);
+/* FIXME: errors; caller should be able to tell between ENOMEM and EIO */
+Array *array_load(Array *a, int fd, off_t offset, size_t count) {
     if (a == NULL)
         return NULL;
-    r = pread_retry(fd, a->data, isize*count, offset);
-    if (r < isize*count) {
+    if (array_realloc(a, count) != count)
+        return NULL;
+    size_t asize = count * a->isize;
+    ssize_t r = pread_retry(fd, a->data, asize, offset);
+    if (r < asize) {
         array_free(a);
         return NULL;
     }
