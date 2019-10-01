@@ -26,21 +26,35 @@ typedef uint8_t Dino_Secidx;
 typedef uint32_t Dino_Offset;
 typedef Dino_Offset Dino_Size;
 
+/* 64-bit offsets/sizes. Uncommon, but valid. */
+typedef uint64_t Dino_Off64;
+typedef Dino_Off64 Dino_Size64;
+
+/* In some contexts (compressed streams etc) a size might be unknown, so we
+ * reserve 0xffffffff... for that. */
+#define DINO_SIZE_UNKNOWN   (~(Dino_Size)0)
+#define DINO_SIZE64_UNKNOWN (~(Dino_Size64)0)
+
+/* In the future we may add more error values like the above, so these
+ * macros are here to let applications guard against overflow. */
+#define DINO_SIZE_MAX       (DINO_SIZE_UNKNOWN-1)
+#define DINO_SIZE64_MAX     (DINO_SIZE64_UNKNOWN-1)
+
 /* If DINO_ENCODING_SEC64 is set, then Dino_Size values in Shdr with their
  * MSB set are actually indexes into a table of Dino_Size64 values that
  * follows the Shdr table. */
 #define DINO_SIZE_IS_64(x) (x & 0x80000000)
 #define DINO_SIZE64_IDX(x) (x & 0x7fffffff)
-#define DINO_SIZE64_INVALID (~0ULL)
-
-/* 64-bit offsets/sizes. Uncommon, but valid. */
-typedef uint64_t Dino_Off64;
-typedef Dino_Off64 Dino_Size64;
-
+#define DINO_SIZE64_INVALID DINO_SIZE64_UNKNOWN
 
 /* Offset into the section name table.
  * Section names are limited to 256 bytes, so 16 bits is enough. */
 typedef uint16_t Dino_NameOffset;
+
+/* Since nametable strings are NUL-terminated, offset 0xffff can never
+ * point to anything but an empty name, so use that offset as a symbol
+ * for "no name". */
+#define DINO_NAME_NONE UINT16_MAX
 
 
 /* Size of the section table. We guarantee that section table entries will
@@ -131,14 +145,16 @@ typedef uint8_t Dino_Encoding;
  * semantics are all totally undefined, the names might change, etc.
  * Just use ARCHIVE for now. */
 typedef enum Dino_Objtype_e {
-    DINO_TYPE_UNKNOWN     = 0, /* This should never be used in actual files */
-    DINO_TYPE_ARCHIVE     = 1, /* Archive/data container */
-    DINO_TYPE_COMPONENT   = 2, /* Shared objects used to build dynamic images */
-    DINO_TYPE_DYNIMG      = 3, /* Dynamic image description */
-    DINO_TYPE_APPLICATION = 4, /* Dynamic image with an entrypoint */
-    DINO_TYPE_DUMP        = 5, /* Dump of a dynamic image */
+    DINO_TYPE_INVALID     = 0, /* This should never be used in actual files */
+    DINO_TYPE_ARCHIVE     = 1, /* Archive/data container/content store */
+    DINO_TYPE_SYSIMG      = 2, /* Self-contained system image */
+    DINO_TYPE_COMPONENT   = 3, /* Shared objects used to build dynamic images */
+    DINO_TYPE_DYNIMG      = 4, /* Dynamic image with external dependencies */
+    DINO_TYPE_APPLICATION = 5, /* Dynamic image with an entrypoint */
+    DINO_TYPE_DUMP        = 6, /* Dump of a dynamic image */
 } Dino_Objtype_e;
 typedef uint8_t Dino_Objtype;
+#define DINO_OBJTYPENUM 7
 
 
 /* The main DINO header - Dhdr for short */
@@ -160,18 +176,21 @@ typedef struct
 /* Hey look it's our magic bytes. */
 #define DINO_MAGIC_V0 "\xed\xab\xee\xf0"
 
+#define DINO_MAGIC_VER(magic) ((uint8_t)(magic)[3] & 0xf)
 
 /* Section flags common to all section types */
 typedef enum Dino_Secflags_e {
     DINO_FLAG_COMPRESSED = 1 << 0, /* bit 0: is this section compressed? */
+    DINO_FLAG_VARINT    =  1 << 1, /* bit 1: does this section use varints? */
 } Dino_Secflags_e;
 typedef uint8_t Dino_Secflags;
 
 
 /* Section-specific data/flags/etc. */
 typedef uint32_t Dino_Secinfo;
-/* TODO: could probably have a union here... */
 
+/* TODO: add #defines etc. here for extracting section-specific info once
+ * the section data layout is stable enough to be part of the public API */
 
 
 
@@ -247,6 +266,10 @@ typedef struct
     Dino_Size       size;  /* Size (in bytes) of this section */
     Dino_Size       count; /* Item count (or other section-specific data) */
 } Dino_Shdr;
+/* TODO: we probably want a `version` field in here somewhere so that we can
+ * make incompatible changes/improvements to section data formats without
+ * risking user data at the hands of tools that don't know what format the
+ * data is really in.. */
 
 /* Shdr with 64-bit size/count values.
  * This is _not_ used on-disk - see note about DINO_ENCODING_SEC64 above. */

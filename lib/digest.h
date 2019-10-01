@@ -18,7 +18,7 @@ void hasher_free(Hasher *h);
  * then we should do that by default rather than handing users a loaded gun
  * and suggesting they aim it away from their own feet. */
 int hasher_start(Hasher *h);
-int hasher_update(Hasher *h, void *d, size_t len);
+int hasher_update(Hasher *h, const void *d, size_t len);
 int hasher_getdigest(Hasher *h, uint8_t *out);
 int hasher_finish(Hasher *h, uint8_t *out);
 #define hasher_oneshot(h, d, len, out) \

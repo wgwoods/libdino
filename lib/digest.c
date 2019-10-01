@@ -70,7 +70,7 @@ int hasher_start(Hasher *h) {
     return EVP_DigestInit_ex(h->ctx, h->type, NULL);
 }
 
-int hasher_update(Hasher *h, void *d, size_t len) {
+int hasher_update(Hasher *h, const void *d, size_t len) {
     return EVP_DigestUpdate(h->ctx, d, len);
 }
 

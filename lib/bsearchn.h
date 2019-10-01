@@ -56,6 +56,9 @@ typedef struct idx_range {
     size_t hi;
 } idx_range;
 
+/* Check to see if a range indicates no match */
+#define idx_range_nomatch(i) (i.lo > i.hi)
+
 /* bsearchpkr_cmp() ("binary search, partial key range") is a search algorithm
  * for sorted arrays that returns a range of indexes that match the prefix
  * given in `pkey`, with size `pkeysize`.

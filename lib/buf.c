@@ -1,4 +1,7 @@
 /* buf.c - Simple buffer API */
+
+#include "common.h" /* MIN, MAX */
+#include "fileio.h" /* read, write, etc. */
 #include "buf.h"
 
 Buf *buf_init(size_t size) {
@@ -14,13 +17,8 @@ size_t buf_realloc(Buf *buf, size_t size) {
         return 0;
     buf->buf = newbuf;
     buf->size = size;
+    buf->pos = MIN(buf->pos, buf->size);
     return size;
-}
-
-void buf_clear(Buf *buf) {
-    free(buf->buf);
-    buf->size = 0;
-    buf->pos = 0;
 }
 
 void buf_free(Buf *buf) {

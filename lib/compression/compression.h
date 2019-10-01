@@ -69,9 +69,10 @@ typedef struct Dino_DStream Dino_DStream;
 
 /* Stream management */
 Dino_CStream *cstream_create(Dino_CompressID id);
-int cstream_setlevel(Dino_CStream *cstream, int level);
-int cstream_setopts(Dino_CStream *cstream, Dino_COpts *copts);
 void cstream_free(Dino_CStream *cstream);
+/* FIXME: implement these! */
+//int cstream_setlevel(Dino_CStream *cstream, int level);
+//int cstream_setopts(Dino_CStream *cstream, Dino_COpts *copts);
 
 Dino_DStream *dstream_create(Dino_CompressID id);
 int dstream_setopts(Dino_DStream *dstream, Dino_DOpts *dopts);
@@ -194,6 +195,7 @@ const Dino_DCFuncs *_get_dcfuncs(Dino_CompressID id);
 
 /* The actual internals of the CStream/DStream structs. */
 typedef struct Dino_CStream {
+    size_t blocksize;
     size_t rec_inbuf_size;
     size_t rec_outbuf_size;
     Dino_CCtx cctx;
@@ -201,6 +203,7 @@ typedef struct Dino_CStream {
 } Dino_CStream;
 
 typedef struct Dino_DStream {
+    size_t blocksize;
     size_t rec_inbuf_size;
     size_t rec_outbuf_size;
     Dino_DCtx dctx;

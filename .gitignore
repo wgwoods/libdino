@@ -51,5 +51,6 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# Build output
+# Build output / subprojects / etc
 builddir/
+subprojects/munit/

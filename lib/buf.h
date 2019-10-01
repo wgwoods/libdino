@@ -35,6 +35,8 @@ void buf_free(Buf *buf);
 #define inbuf_free(buf) buf_free((Buf *)buf)
 #define outbuf_free(buf) buf_free((Buf *)buf)
 
+#define buf_clear(b)    (b->pos = 0)
+
 /* Slices are read-only references to parts of a Buf */
 typedef inBuf Slice;
 Slice *slice_buf(Buf *buf, size_t pos, size_t len);

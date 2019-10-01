@@ -12,6 +12,8 @@
  * we could fit the fanout table in 256 bytes. But is the added complexity
  * really worth saving 768 bytes of RAM? Doubtful. */
 
+typedef void *getval_t(Dino_Index *idx, Dino_Idx_Cnt i);
+
 /* An in-memory Index object. */
 typedef struct Dino_Index {
     /* How many items are in the index? */
@@ -20,8 +22,8 @@ typedef struct Dino_Index {
     /* Which section's data is this an index of? */
     Dino_Secidx othersec;
 
-    /* How big are the keys? */
-    uint8_t keysize;
+    /* Section-specific flags */
+    Dino_Idx_Flags flags;
 
     /* Fanout table - not resizeable, so not an Array */
     Dino_Idx_Cnt *fanout;
@@ -35,15 +37,18 @@ typedef struct Dino_Index {
 
 void index_free(Dino_Index *idx);
 
-Dino_Index *index_new(uint8_t keysize) {
+inline Dino_Sec *dino_get_index_othersec(Dino *dino, Dino_Index *idx) {
+    return dino_getsec(dino, idx->othersec);
+}
+
+Dino_Index *index_new(Dino_Idx_Keysize keysize, uint8_t valsize) {
     if (!keysize)
         return NULL;
     Dino_Index *idx = calloc(1, sizeof(Dino_Index));
     if (idx == NULL)
         return NULL;
-    idx->keysize = keysize;
     idx->keys = array_new(keysize);
-    idx->vals = array_new(sizeof(Dino_Idx_Val));
+    idx->vals = array_new(valsize);
     if ((idx->keys == NULL) || (idx->vals == NULL)) {
         index_free(idx);
         return NULL;
@@ -51,8 +56,8 @@ Dino_Index *index_new(uint8_t keysize) {
     return idx;
 }
 
-Dino_Index *index_init(uint8_t keysize) {
-    Dino_Index *idx = index_new(keysize);
+Dino_Index *index_init(Dino_Idx_Keysize keysize, uint8_t valsize) {
+    Dino_Index *idx = index_new(keysize, valsize);
     if (idx == NULL)
         return NULL;
     idx->fanout = calloc(256, sizeof(Dino_Idx_Cnt));
@@ -71,8 +76,8 @@ ssize_t index_realloc(Dino_Index *idx, size_t alloc_count) {
     return alloc_count;
 }
 
-Dino_Index *index_with_capacity(uint8_t keysize, size_t alloc_count) {
-    Dino_Index *idx = index_new(keysize);
+Dino_Index *index_with_capacity(Dino_Idx_Keysize keysize, uint8_t valsize, size_t alloc_count) {
+    Dino_Index *idx = index_new(keysize, valsize);
     if (idx == NULL)
         return NULL;
     if (alloc_count == 0)
@@ -99,8 +104,27 @@ void index_free(Dino_Index *idx) {
 }
 
 Dino_Index *index_from_shdr(Dino_Shdr *shdr) {
-    Dino_Index *idx = index_new(shdr->info & 0xff);
-    idx->othersec = (shdr->info >> 8) & 0xff;
+    Dino_Idx_Flags flags = DINO_SECINFO_IDX_FLAGS(shdr->info);
+    uint8_t valsize;
+    switch (flags & (DINO_IDX_FLAG_64BIT|DINO_IDX_FLAG_UNC_SIZE)) {
+        case DINO_IDX_FLAG_64BIT|DINO_IDX_FLAG_UNC_SIZE:
+            valsize = sizeof(Dino_Idx_Val_Unc64);
+            break;
+        case DINO_IDX_FLAG_UNC_SIZE:
+            valsize = sizeof(Dino_Idx_Val_Unc32);
+            break;
+        case DINO_IDX_FLAG_64BIT:
+            valsize = sizeof(Dino_Idx_Val64);
+            break;
+        case 0:
+            valsize = sizeof(Dino_Idx_Val32);
+    }
+    Dino_Idx_Keysize keysize = DINO_SECINFO_IDX_KEYSIZE(shdr->info);
+    Dino_Index *idx = index_new(keysize, valsize);
+    if (idx) {
+        idx->othersec = DINO_SECINFO_IDX_OTHERSEC(shdr->info);
+        idx->flags = flags;
+    }
     return idx;
 }
 
@@ -117,6 +141,7 @@ ssize_t load_index_data(Dino_Sec *sec) {
     off = sec->offset;
     idx->count = sec->count;
 
+    /* FIXME: decode varints... */
     idx->fanout = malloc(FANOUT_SIZE);
     r = pread_retry(sec->dino->fd, idx->fanout, FANOUT_SIZE, sec->offset);
     if (r < FANOUT_SIZE) {
@@ -125,11 +150,13 @@ ssize_t load_index_data(Dino_Sec *sec) {
     }
     off += r;
 
-    /* FIXME: error checking... */
-    idx->keys = array_read(sec->dino->fd, off, idx->keysize, idx->count);
-    off += (idx->keysize * sec->count);
+    if (!array_load(idx->keys, sec->dino->fd, off, idx->count))
+        return -EIO;
 
-    idx->vals = array_read(sec->dino->fd, off, sizeof(Dino_Idx_Val), idx->count);
+    off += array_size(idx->keys);
+
+    if (!array_load(idx->vals, sec->dino->fd, off, idx->count))
+        return -EIO;
 
     sec->data.d.off = 0;
     sec->data.d.data = idx;
@@ -158,7 +185,7 @@ ssize_t index_find(Dino_Index *idx, const Dino_Idx_Key *key) {
     uint8_t b = key[0];
     baseidx = (b==0) ? 0 : idx->fanout[b-1];
     num = idx->fanout[b] - baseidx;
-    return bsearchir(key, idx->keys->data, baseidx, num, idx->keysize);
+    return bsearchir(key, idx->keys->data, baseidx, num, idx->keys->isize);
 }
 
 Dino_Idx_Val *index_search(Dino_Index *idx, const Dino_Idx_Key *key) {
@@ -166,22 +193,32 @@ Dino_Idx_Val *index_search(Dino_Index *idx, const Dino_Idx_Key *key) {
     return (i < 0) ? NULL : array_get(idx->vals, i);
 }
 
-Dino_Idx_Key *index_key_match(Dino_Index *idx, const Dino_Idx_Key *key, size_t matchlen) {
+Dino_Idx_Range index_key_match(Dino_Index *idx, const Dino_Idx_Key *key, size_t matchlen) {
     size_t baseidx, num;
     uint8_t b = key[0];
     baseidx = (b==0) ? 0 : idx->fanout[b-1];
     num = idx->fanout[b] - baseidx;
-    idx_range r = bsearchpkr(key, matchlen, idx->keys->data, baseidx, num, idx->keysize);
-    if (r.hi == r.lo)
-        return array_get(idx->keys, r.lo);
-    return NULL;
+    idx_range r = bsearchpkr(key, matchlen, idx->keys->data, baseidx, num, idx->keys->isize);
+    /* TODO: this is goofy. These should be the same type... */
+    return (Dino_Idx_Range) { r.lo, r.hi };
 }
 
 Dino_Index *get_index(Dino *dino, Dino_Secidx idx) {
-    Dino_Sec *sec = get_sec(dino, idx);
-    if (sec->shdr->type == DINO_SEC_INDEX)
+    Dino_Sec *sec = dino_getsec(dino, idx);
+    if (sec && (sec->shdr->type == DINO_SEC_INDEX))
         return sec->data.d.data;
     return NULL;
+}
+
+Dino_Index *get_index_byname(Dino *dino, const char *name) {
+    Dino_Secidx idx = get_secidx_byname(dino, name);
+    if (idx >= 0)
+        return get_index(dino, idx);
+    return NULL;
+}
+
+uint8_t index_get_keysize(Dino_Index *idx) {
+    return idx->keys->isize;
 }
 
 Dino_Idx_Key *index_get_key(Dino_Index *idx, Dino_Idx_Cnt i) {

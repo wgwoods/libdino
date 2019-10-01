@@ -29,6 +29,10 @@ struct Dino_Namtab {
     char *data;             /* contents of nametable */
 };
 
+#define _namtab_getstr(nt, off) ((nt).data+(off))
+#define _namtab_hasstr(nt, off) (off<(nt).size)
+#define _dino_getname(dino, off) _namtab_getstr((dino)->namtab, off)
+
 /* DINO Section descriptor. */
 struct Dino_Sec {
     Dino_Data_List data;
@@ -51,6 +55,10 @@ struct Dino_Sectab {
 /* Internal sectab functions */
 void clear_sectab(Dino_Sectab *sectab);
 Dino_Secidx realloc_sectab(Dino_Sectab *sectab, Dino_Secidx alloc_count);
+
+#define _sectab_getsec(st, idx) ((st).sec+(idx))
+#define _sectab_hassec(st, idx) ((idx)<(st).count)
+#define _dino_getsec(dino, idx) _sectab_getsec((dino)->sectab, idx)
 
 /* DINO descriptor. */
 struct Dino {

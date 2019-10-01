@@ -1,12 +1,7 @@
 /* Variable-length integer encoding/decoding.
  *
- * dino_encode_varint and dino_decode_varint adapted from libgit2/src/varint.c:
- *
- *    Copyright (C) the libgit2 contributors. All rights reserved.
- *
- *    This file is part of libgit2, distributed under the GNU GPL v2 with
- *    a Linking Exception. For full terms see the included COPYING file.
- *
+ * dino_encode_varint and dino_decode_varint adapted from libgit2:
+ *   https://github.com/libgit2/libgit2/blob/v0.28.3/src/varint.c
  */
 
 #include "common.h"

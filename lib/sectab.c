@@ -1,5 +1,6 @@
 #include "libdino_internal.h"
 #include "fileio.h"
+#include "memory.h"
 
 Dino_Sectab *new_sectab(Dino_Secidx alloc_count) {
     Dino_Sectab *sectab = calloc(1, sizeof(Dino_Sectab));
@@ -35,14 +36,27 @@ void free_sectab(Dino_Sectab *sectab) {
     free(sectab);
 }
 
-Dino_Sec *get_sec(Dino *dino, Dino_Secidx idx) {
-    if (idx < dino->sectab.count) {
-        return &dino->sectab.sec[idx];
-    } else {
-        return NULL;
+inline Dino_Sec *dino_getsec(Dino *dino, Dino_Secidx idx) {
+    if (_sectab_hassec(dino->sectab, idx))
+        return _sectab_getsec(dino->sectab, idx);
+    return NULL;
+}
+
+inline const char *dino_secname(Dino_Sec *sec) {
+    return dino_getname(sec->dino, sec->shdr->name);
+}
+
+int get_secidx_byname(Dino *dino, const char *name) {
+    for (Dino_Secidx idx=0; idx < dino->sectab.count; idx++) {
+        Dino_Sec *sec = _dino_getsec(dino, idx);
+        const char *secname = _dino_getname(dino, sec->shdr->name);
+        if (secname && (strncmp(secname, name, dino->namtab.size) == 0)) {
+            return idx;
+        }
     }
+    return -1;
 }
 
 Dino_Shdr *get_shdr(Dino *dino, Dino_Secidx idx) {
-    return get_sec(dino, idx)->shdr;
+    return _dino_getsec(dino, idx)->shdr;
 }
