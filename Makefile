@@ -30,4 +30,7 @@ install: $(BUILDDIR)
 fake-install: $(BUILDDIR)
 	meson -C $(BUILDDIR) -v -n install
 
+install-deps:
+	sudo dnf install rpm-devel openssl-devel xz-devel libzstd-devel
+
 .PHONY: all config check valgrind-check clean install fake-install gitbuild
